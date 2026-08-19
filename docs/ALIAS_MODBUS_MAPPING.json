@@ -1,0 +1,629 @@
+[
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Aktuelle_Verdichterfrequenz_(EB101)",
+    "name": "Aktuelle_Verdichterfrequenz_(EB101)",
+    "type": "number",
+    "role": "value.frequency",
+    "unit": "Hz",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.1803_31803",
+    "modbus_area": "inputRegisters",
+    "register_index": "1803",
+    "modbus_address": "31803",
+    "read_transform": "",
+    "used_by": [
+      "02_NPS_EnergyAllocation.js",
+      "04_NPS_CompressorMonitor.js",
+      "06_NPS_ProcessSignals.js",
+      "98_NPS_CycleRecorder.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Alarmnummer",
+    "name": "Alarmnummer",
+    "type": "number",
+    "role": "value",
+    "unit": "",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.1975_31975",
+    "modbus_area": "inputRegisters",
+    "register_index": "1975",
+    "modbus_address": "31975",
+    "read_transform": "",
+    "used_by": [
+      "09_NPS_NotificationBridge.js",
+      "10_NPS_DashboardData.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Aussentemperatur",
+    "name": "Aussentemperatur",
+    "type": "number",
+    "role": "value.temperature",
+    "unit": "°C",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.1_30001",
+    "modbus_area": "inputRegisters",
+    "register_index": "1",
+    "modbus_address": "30001",
+    "read_transform": "",
+    "used_by": [
+      "98_NPS_CycleRecorder.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Außenlufttemperatur_(EB101-BT28)",
+    "name": "Außenlufttemperatur_(EB101-BT28)",
+    "type": "number",
+    "role": "value.temperature",
+    "unit": "°C",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.1621_31621",
+    "modbus_area": "inputRegisters",
+    "register_index": "1621",
+    "modbus_address": "31621",
+    "read_transform": "",
+    "used_by": [
+      "03_NPS_TemperatureMonitor.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Berechneter_Vorlauf_Klimatisierungssystem_1",
+    "name": "Berechneter Vorlauf Klimatisierungssystem 1",
+    "type": "number",
+    "role": "value.temperature",
+    "unit": "°C",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.1017_31017",
+    "modbus_area": "inputRegisters",
+    "register_index": "1017",
+    "modbus_address": "31017",
+    "read_transform": "",
+    "used_by": [
+      "10_NPS_DashboardData.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Betriebsmodus_interne_Zusatzheizung",
+    "name": "Betriebsmodus_interne_Zusatzheizung",
+    "type": "number",
+    "role": "value",
+    "unit": "",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.1029_31029",
+    "modbus_area": "inputRegisters",
+    "register_index": "1029",
+    "modbus_address": "31029",
+    "read_transform": "",
+    "used_by": [
+      "10_NPS_DashboardData.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Brauchwasser_einschl_interner_ZH",
+    "name": "Brauchwasser_einschl_interner_ZH",
+    "type": "number",
+    "role": "value.energy",
+    "unit": "kWh",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.1575_31575",
+    "modbus_area": "inputRegisters",
+    "register_index": "1575",
+    "modbus_address": "31575",
+    "read_transform": "",
+    "used_by": [
+      "01_NPS_VirtualMeters.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Brauchwasser_nur_Verdichter",
+    "name": "Brauchwasser_nur_Verdichter",
+    "type": "number",
+    "role": "value.energy",
+    "unit": "kWh",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.1583_31583",
+    "modbus_area": "inputRegisters",
+    "register_index": "1583",
+    "modbus_address": "31583",
+    "read_transform": "",
+    "used_by": [
+      "01_NPS_VirtualMeters.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Brauchwasser_oben",
+    "name": "Brauchwasser_oben",
+    "type": "number",
+    "role": "value.temperature",
+    "unit": "°C",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.8_30008",
+    "modbus_area": "inputRegisters",
+    "register_index": "8",
+    "modbus_address": "30008",
+    "read_transform": "",
+    "used_by": [
+      "10_NPS_DashboardData.js",
+      "98_NPS_CycleRecorder.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Brauchwasserbereitung",
+    "name": "Brauchwasserbereitung",
+    "type": "number",
+    "role": "value.temperature",
+    "unit": "°C",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.9_30009",
+    "modbus_area": "inputRegisters",
+    "register_index": "9",
+    "modbus_address": "30009",
+    "read_transform": "",
+    "used_by": [
+      "10_NPS_DashboardData.js",
+      "98_NPS_CycleRecorder.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Energieprotokoll_Energieverbrauch_der_Zusatzheizung_für_Brauchwasser_in_der_letzten_Stunde",
+    "name": "Energieprotokoll_Energieverbrauch der Zusatzheizung für Brauchwasser in der letzten Stunde",
+    "type": "number",
+    "role": "value.energy",
+    "unit": "kWh",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.2301_32301",
+    "modbus_area": "inputRegisters",
+    "register_index": "2301",
+    "modbus_address": "32301",
+    "read_transform": "",
+    "used_by": [
+      "12_NPS_ElectricalMeters.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Energieprotokoll_Energieverbrauch_der_Zusatzheizung_für_Heizung_in_der_letzten_Stunde",
+    "name": "Energieprotokoll_Energieverbrauch der Zusatzheizung für Heizung in der letzten Stunde",
+    "type": "number",
+    "role": "value.energy",
+    "unit": "kWh",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.2299_32299",
+    "modbus_area": "inputRegisters",
+    "register_index": "2299",
+    "modbus_address": "32299",
+    "read_transform": "",
+    "used_by": [
+      "12_NPS_ElectricalMeters.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Energieprotokoll_Energieverbrauch_für_Brauchwasser_in_der_letzten_Stunde",
+    "name": "Energieprotokoll_Energieverbrauch für Brauchwasser in der letzten Stunde",
+    "type": "number",
+    "role": "value.energy",
+    "unit": "kWh",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.2293_32293",
+    "modbus_area": "inputRegisters",
+    "register_index": "2293",
+    "modbus_address": "32293",
+    "read_transform": "",
+    "used_by": [
+      "12_NPS_ElectricalMeters.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Energieprotokoll_Energieverbrauch_für_Heizung_in_der_letzten_Stunde",
+    "name": "Energieprotokoll_Energieverbrauch für Heizung in der letzten Stunde",
+    "type": "number",
+    "role": "value.energy",
+    "unit": "kWh",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.2291_32291",
+    "modbus_area": "inputRegisters",
+    "register_index": "2291",
+    "modbus_address": "32291",
+    "read_transform": "",
+    "used_by": [
+      "12_NPS_ElectricalMeters.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Energieprotokoll___Tatsächlicher_Energieverbrauch",
+    "name": "Energieprotokoll – Tatsächlicher Energieverbrauch",
+    "type": "number",
+    "role": "value.power",
+    "unit": "W",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.2305_32305",
+    "modbus_area": "inputRegisters",
+    "register_index": "2305",
+    "modbus_address": "32305",
+    "read_transform": "val = val * 1000",
+    "used_by": [
+      "12_NPS_ElectricalMeters.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Enteisung",
+    "name": "Enteisung",
+    "type": "number",
+    "role": "value",
+    "unit": "",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.1805_31805",
+    "modbus_area": "inputRegisters",
+    "register_index": "1805",
+    "modbus_address": "31805",
+    "read_transform": "",
+    "used_by": [
+      "05_NPS_DefrostMonitor.js",
+      "06_NPS_ProcessSignals.js",
+      "98_NPS_CycleRecorder.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Erzeugte_Leistung_Wärme_(EB101)",
+    "name": "Erzeugte_Leistung_Wärme_(EB101)",
+    "type": "number",
+    "role": "value.power",
+    "unit": "kW",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.406_30406",
+    "modbus_area": "inputRegisters",
+    "register_index": "406",
+    "modbus_address": "30406",
+    "read_transform": "",
+    "used_by": [
+      "10_NPS_DashboardData.js",
+      "98_NPS_CycleRecorder.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Gesamtproduktion",
+    "name": "Gesamtproduktion",
+    "type": "number",
+    "role": "value.energy",
+    "unit": "kWh",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.3821_33821",
+    "modbus_area": "inputRegisters",
+    "register_index": "3821",
+    "modbus_address": "33821",
+    "read_transform": "",
+    "used_by": [
+      "98_NPS_CycleRecorder.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Gesamtverbrauch",
+    "name": "Gesamtverbrauch",
+    "type": "number",
+    "role": "value.energy",
+    "unit": "kWh",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.3823_33823",
+    "modbus_area": "inputRegisters",
+    "register_index": "3823",
+    "modbus_address": "33823",
+    "read_transform": "",
+    "used_by": [
+      "12_NPS_ElectricalMeters.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Heizung_einschl_interner_ZH",
+    "name": "Heizung_einschl_interner_ZH",
+    "type": "number",
+    "role": "value.energy",
+    "unit": "kWh",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.1577_31577",
+    "modbus_area": "inputRegisters",
+    "register_index": "1577",
+    "modbus_address": "31577",
+    "read_transform": "",
+    "used_by": [
+      "01_NPS_VirtualMeters.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Heizung_nur_Verdichter",
+    "name": "Heizung_nur_Verdichter",
+    "type": "number",
+    "role": "value.energy",
+    "unit": "kWh",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.1585_31585",
+    "modbus_area": "inputRegisters",
+    "register_index": "1585",
+    "modbus_address": "31585",
+    "read_transform": "",
+    "used_by": [
+      "01_NPS_VirtualMeters.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Kondensatorfühler_Vorlauf_(EB101-BT12)",
+    "name": "Kondensatorfühler_Vorlauf_(EB101-BT12)",
+    "type": "number",
+    "role": "value.temperature",
+    "unit": "°C",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.1478_31478",
+    "modbus_area": "inputRegisters",
+    "register_index": "1478",
+    "modbus_address": "31478",
+    "read_transform": "",
+    "used_by": [
+      "98_NPS_CycleRecorder.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Leistung_interne_Zusatzheizung",
+    "name": "Leistung_interne_Zusatzheizung",
+    "type": "number",
+    "role": "value.power",
+    "unit": "kW",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.1027_31027",
+    "modbus_area": "inputRegisters",
+    "register_index": "1027",
+    "modbus_address": "31027",
+    "read_transform": "",
+    "used_by": [
+      "10_NPS_DashboardData.js",
+      "98_NPS_CycleRecorder.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Ruecklauf",
+    "name": "Ruecklauf",
+    "type": "number",
+    "role": "value.temperature",
+    "unit": "°C",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.7_30007",
+    "modbus_area": "inputRegisters",
+    "register_index": "7",
+    "modbus_address": "30007",
+    "read_transform": "",
+    "used_by": [
+      "03_NPS_TemperatureMonitor.js",
+      "98_NPS_CycleRecorder.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Status_Verdichter_Bedarf",
+    "name": "Status Verdichter Bedarf",
+    "type": "number",
+    "role": "value",
+    "unit": "",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.350_30350",
+    "modbus_area": "inputRegisters",
+    "register_index": "350",
+    "modbus_address": "30350",
+    "read_transform": "",
+    "used_by": [
+      "06_NPS_ProcessSignals.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Status_Verdichter_Erwärmer",
+    "name": "Status Verdichter Erwärmer",
+    "type": "number",
+    "role": "value",
+    "unit": "",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.348_30348",
+    "modbus_area": "inputRegisters",
+    "register_index": "348",
+    "modbus_address": "30348",
+    "read_transform": "",
+    "used_by": [
+      "06_NPS_ProcessSignals.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Strom_(EB101-EP14)",
+    "name": "Strom (EB101-EP14)",
+    "type": "number",
+    "role": "value.current",
+    "unit": "A",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.1903_31903",
+    "modbus_area": "inputRegisters",
+    "register_index": "1903",
+    "modbus_address": "31903",
+    "read_transform": "",
+    "used_by": [
+      "06_NPS_ProcessSignals.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.UNREACH",
+    "name": "UNREACH",
+    "type": "boolean",
+    "role": "indicator",
+    "unit": "",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.info.connection",
+    "modbus_area": "info",
+    "register_index": "",
+    "modbus_address": "",
+    "read_transform": "val = !val",
+    "used_by": [
+      "09_NPS_NotificationBridge.js",
+      "10_NPS_DashboardData.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Verdichter_Anzahl_Starts",
+    "name": "Verdichter_Anzahl_Starts",
+    "type": "number",
+    "role": "value",
+    "unit": "",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.1489_31489",
+    "modbus_area": "inputRegisters",
+    "register_index": "1489",
+    "modbus_address": "31489",
+    "read_transform": "",
+    "used_by": [
+      "04_NPS_CompressorMonitor.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Verdichter_Gesamtbetriebszeit_(EB101-EP14)",
+    "name": "Verdichter_Gesamtbetriebszeit_(EB101-EP14)",
+    "type": "number",
+    "role": "value.interval",
+    "unit": "h",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.1491_31491",
+    "modbus_area": "inputRegisters",
+    "register_index": "1491",
+    "modbus_address": "31491",
+    "read_transform": "",
+    "used_by": [
+      "04_NPS_CompressorMonitor.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Verdichterstatus",
+    "name": "Verdichterstatus",
+    "type": "number",
+    "role": "value",
+    "unit": "",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.1484_31484",
+    "modbus_area": "inputRegisters",
+    "register_index": "1484",
+    "modbus_address": "31484",
+    "read_transform": "",
+    "used_by": [
+      "04_NPS_CompressorMonitor.js",
+      "98_NPS_CycleRecorder.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Volumenstrommesser_(BF1)",
+    "name": "Volumenstrommesser_(BF1)",
+    "type": "number",
+    "role": "value.flow",
+    "unit": "l/min",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.40_30040",
+    "modbus_area": "inputRegisters",
+    "register_index": "40",
+    "modbus_address": "30040",
+    "read_transform": "",
+    "used_by": [
+      "03_NPS_TemperatureMonitor.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.Vorlauf",
+    "name": "Vorlauf",
+    "type": "number",
+    "role": "value.temperature",
+    "unit": "°C",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.5_30005",
+    "modbus_area": "inputRegisters",
+    "register_index": "5",
+    "modbus_address": "30005",
+    "read_transform": "",
+    "used_by": [
+      "03_NPS_TemperatureMonitor.js"
+    ],
+    "status": "resolved"
+  },
+  {
+    "alias": "alias.0.Keller.Waschküche.Waermepumpe.prio",
+    "name": "prio",
+    "type": "number",
+    "role": "value",
+    "unit": "",
+    "read": true,
+    "write": false,
+    "modbus_object": "modbus.0.inputRegisters.1028_31028",
+    "modbus_area": "inputRegisters",
+    "register_index": "1028",
+    "modbus_address": "31028",
+    "read_transform": "",
+    "used_by": [
+      "02_NPS_EnergyAllocation.js",
+      "06_NPS_ProcessSignals.js",
+      "98_NPS_CycleRecorder.js"
+    ],
+    "status": "resolved"
+  }
+]

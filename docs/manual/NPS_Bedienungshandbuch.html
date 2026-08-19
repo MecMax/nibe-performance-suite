@@ -1,0 +1,505 @@
+<!doctype html><html lang='de'><head><meta charset='utf-8'>
+<title>NIBE Performance Suite – Bedienungs- und Auswertungshandbuch</title>
+<meta name='viewport' content='width=device-width,initial-scale=1'>
+<style>body{font-family:Arial,sans-serif;max-width:1050px;margin:30px auto;padding:0 20px;background:#202124;color:#E0E0E0}hr{border:0;border-top:1px solid #555;margin:35px 0}</style>
+</head><body>
+<h1>NIBE Performance Suite – Bedienungs- und Auswertungshandbuch</h1><p>Dokumentationsversion 1.0.0</p>
+<div class="nps-help" style="padding:14px;line-height:1.55;text-align:left;color:#E0E0E0;"><div style="font-size:1.35em;font-weight:700;margin-bottom:6px;">1. NPS – Allgemeine Bedienung</div><div style="color:#BDBDBD;margin-bottom:14px;">Grundlagen zur Navigation, Farbgebung und Interpretation der NIBE Performance Suite.</div><section style="margin-top:18px;"><div style="font-size:1.08em;font-weight:600;margin-bottom:7px;">Navigation</div><p style="margin:6px 0 10px;">Die Hauptseite führt zu acht Detailseiten: System, Leistung &amp; Effizienz, Energie, Verdichter, Temperaturen, Zyklus, Ereignisse und Enteisung.</p><p style="margin:6px 0 10px;">Ein Pfeil nach rechts kennzeichnet den Sprung in eine Detailansicht. Ein Pfeil nach links kennzeichnet den Rücksprung zur NPS-Hauptseite.</p></section><section style="margin-top:18px;"><div style="font-size:1.08em;font-weight:600;margin-bottom:7px;">Drei verschiedene Farbarten</div><p style="margin:6px 0 10px;">NPS unterscheidet bewusst zwischen Betriebsartenfarben, Bewertungsfarben und reinen Kurvenfarben. Eine Kurvenfarbe ist keine Qualitätsbewertung.</p><div style="overflow-x:auto;margin:8px 0 14px;"><table style="width:100%;border-collapse:collapse;font-size:0.96em;"><thead><tr><th style="text-align:left;padding:7px 8px;border-bottom:1px solid #616161;">Art</th><th style="text-align:left;padding:7px 8px;border-bottom:1px solid #616161;">Bedeutung</th></tr></thead><tbody><tr><td style="vertical-align:top;padding:7px 8px;border-bottom:1px solid #424242;">Betriebsartenfarbe</td><td style="vertical-align:top;padding:7px 8px;border-bottom:1px solid #424242;">Zeigt, welcher Anlagenprozess aktuell aktiv ist.</td></tr><tr><td style="vertical-align:top;padding:7px 8px;border-bottom:1px solid #424242;">Bewertungsfarbe</td><td style="vertical-align:top;padding:7px 8px;border-bottom:1px solid #424242;">Ampel für Qualität, Effizienz oder Plausibilität.</td></tr><tr><td style="vertical-align:top;padding:7px 8px;border-bottom:1px solid #424242;">Kurvenfarbe</td><td style="vertical-align:top;padding:7px 8px;border-bottom:1px solid #424242;">Dient nur zur eindeutigen Wiedererkennung einer Messreihe im Diagramm.</td></tr></tbody></table></div></section><section style="margin-top:18px;"><div style="font-size:1.08em;font-weight:600;margin-bottom:7px;">Betriebsartenfarben</div><div style="margin:8px 0 14px;"><div style="margin:5px 0;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#C45A32;margin-right:8px;vertical-align:middle;"></span><span>Heizung</span><span style="color:#9E9E9E;margin-left:8px;">(#C45A32)</span></div><div style="margin:5px 0;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#00A6A6;margin-right:8px;vertical-align:middle;"></span><span>Warmwasser</span><span style="color:#9E9E9E;margin-left:8px;">(#00A6A6)</span></div><div style="margin:5px 0;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#78909C;margin-right:8px;vertical-align:middle;"></span><span>Standby</span><span style="color:#9E9E9E;margin-left:8px;">(#78909C)</span></div><div style="margin:5px 0;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#8E5BB7;margin-right:8px;vertical-align:middle;"></span><span>Abtauen</span><span style="color:#9E9E9E;margin-left:8px;">(#8E5BB7)</span></div><div style="margin:5px 0;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#2196F3;margin-right:8px;vertical-align:middle;"></span><span>Kühlen</span><span style="color:#9E9E9E;margin-left:8px;">(#2196F3)</span></div><div style="margin:5px 0;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:#616161;margin-right:8px;vertical-align:middle;"></span><span>Aus</span><span style="color:#9E9E9E;margin-left:8px;">(#616161)</span></div><div style="margin:5px 0;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:grey;margin-right:8px;vertical-align:middle;"></span><span>Unbekannt</span><span style="color:#9E9E9E;margin-left:8px;">(grey)</span></div></div></section><section style="margin-top:18px;"><div style="font-size:1.08em;font-weight:600;margin-bottom:7px;">Bewertungsfarben</div><div style="margin:8px 0 14px;"><div style="margin:5px 0;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:lime;margin-right:8px;vertical-align:middle;"></span><span>Exzellent / hervorragend</span><span style="color:#9E9E9E;margin-left:8px;">(lime)</span></div><div style="margin:5px 0;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:green;margin-right:8px;vertical-align:middle;"></span><span>Gut</span><span style="color:#9E9E9E;margin-left:8px;">(green)</span></div><div style="margin:5px 0;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:yellow;margin-right:8px;vertical-align:middle;"></span><span>Normal / Warnung</span><span style="color:#9E9E9E;margin-left:8px;">(yellow)</span></div><div style="margin:5px 0;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:orange;margin-right:8px;vertical-align:middle;"></span><span>Auffällig / kritisch</span><span style="color:#9E9E9E;margin-left:8px;">(orange)</span></div><div style="margin:5px 0;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:red;margin-right:8px;vertical-align:middle;"></span><span>Kritisch / Störung</span><span style="color:#9E9E9E;margin-left:8px;">(red)</span></div><div style="margin:5px 0;"><span style="display:inline-block;width:12px;height:12px;border-radius:50%;background:grey;margin-right:8px;vertical-align:middle;"></span><span>Keine gültige Bewertung</span><span style="color:#9E9E9E;margin-left:8px;">(grey)</span></div></div></section><section style="margin-top:18px;"><div style="font-size:1.08em;font-weight:600;margin-bottom:7px;">COP-Ampel</div><p style="margin:6px 0 10px;">COP-Werte werden in NPS mit einer Nachkommastelle dargestellt. Einzelne Momentanwerte sollten immer zusammen mit Betriebsart, Außentemperatur und Leistungsanforderung betrachtet werden.</p><div style="overflow-x:auto;margin:8px 0 14px;"><table style="width:100%;border-collapse:collapse;font-size:0.96em;"><thead><tr><th style="text-align:left;padding:7px 8px;border-bottom:1px solid #616161;">COP</th><th style="text-align:left;padding:7px 8px;border-bottom:1px solid #616161;">Bewertung</th></tr></thead><tbody><tr><td style="vertical-align:top;padding:7px 8px;border-bottom:1px solid #424242;">&lt; 0,1</td><td style="vertical-align:top;padding:7px 8px;border-bottom:1px solid #424242;">Grau – keine Bewertung / Anlage inaktiv</td></tr><tr><td style="vertical-align:top;padding:7px 8px;border-bottom:1px solid #424242;">0,1 bis &lt; 2,2</td><td style="vertical-align:top;padding:7px 8px;border-bottom:1px solid #424242;">Rot – kritisch</td></tr><tr><td style="vertical-align:top;padding:7px 8px;border-bottom:1px solid #424242;">2,2 bis &lt; 3,0</td><td style="vertical-align:top;padding:7px 8px;border-bottom:1px solid #424242;">Orange – auffällig</td></tr><tr><td style="vertical-align:top;padding:7px 8px;border-bottom:1px solid #424242;">3,0 bis &lt; 3,8</td><td style="vertical-align:top;padding:7px 8px;border-bottom:1px solid #424242;">Gelb – normal</td></tr><tr><td style="vertical-align:top;padding:7px 8px;border-bottom:1px solid #424242;">3,8 bis &lt; 4,5</td><td style="vertical-align:top;padding:7px 8px;border-bottom:1px solid #424242;">Grün – gut</td></tr><tr><td style="vertical-align:top;padding:7px 8px;border-bottom:1px solid #424242;">≥ 4,5</td><td style="vertical-align:top;padding:7px 8px;border-bottom:1px solid #424242;">Lime – hervorragend</td></tr></tbody></table></div></section><section style="margin-top:18px;"><div style="font-size:1.08em;font-weight:600;margin-bottom:7px;">Hinweis zur Interpretation</div><p style="margin:6px 0 10px;">NPS ist eine Analyse- und Visualisierungsschicht. Eine rote Bewertung eines Analysewertes ist nicht automatisch gleichbedeutend mit einer technischen Störung der Wärmepumpe.</p><p style="margin:6px 0 10px;">Für technische Störungen sind insbesondere Alarmstatus und technischer Anlagenzustand maßgeblich.</p></section></div>
+<hr>
+
+<style>
+body{font-family:Arial,Helvetica,sans-serif;background:#121212;color:#E0E0E0;margin:0;padding:0;}
+.wrap{padding:18px;line-height:1.6;}
+h1{font-size:24px;margin:0 0 14px;}
+h2{font-size:18px;margin:22px 0 8px;}
+p{margin:8px 0 12px;}
+table{width:100%;border-collapse:collapse;margin:10px 0 16px;}
+th,td{padding:8px 10px;border-bottom:1px solid #333;vertical-align:top;text-align:left;}
+th{font-weight:600;color:#FFF;}
+.note{padding:10px 12px;border-left:4px solid #78909C;background:#1b1b1b;margin:14px 0;}
+.good{color:lime}.green{color:green}.yellow{color:yellow}.orange{color:orange}.red{color:red}.grey{color:grey}
+code{background:#1f1f1f;padding:2px 5px;border-radius:4px;}
+.small{font-size:13px;color:#BDBDBD}
+</style>
+
+<div class="wrap">
+<h1>NPS – System</h1>
+<p>Die Detailseite <b>System</b> dient der übergeordneten Zustands- und Datenüberwachung der NIBE Performance Suite. Sie hilft dabei zu unterscheiden, ob ein Problem von der Wärmepumpenanlage selbst, von der Datenbereitstellung oder von einem NPS-Modul ausgeht.</p>
+
+<h2>Anlagenzustand</h2>
+<p>Der Anlagenzustand beschreibt die technische Gesamtbewertung der überwachten Wärmepumpenanlage. Ein auffälliger Anlagenzustand sollte deshalb anders bewertet werden als ein reines Daten- oder NPS-Problem.</p>
+
+<h2>NPS Health</h2>
+<p><b>NPS Health</b> ist ein Wert zwischen 0 und 100 %. Er bewertet die Qualität und Plausibilität der für NPS verfügbaren Informationen. <b>100 % bedeutet, dass aktuell kein bewertetes Prüfkriterium zu einem Abzug führt.</b> Ein niedriger Health-Wert bedeutet dagegen nicht automatisch, dass die Wärmepumpe eine technische Störung hat.</p>
+<table>
+<tr><th>Health</th><th>Bewertung</th><th>Bedeutung</th></tr>
+<tr><td>≥ 98 %</td><td><span class="good">●</span> hervorragend</td><td>Keine bzw. praktisch keine Einschränkungen</td></tr>
+<tr><td>90–&lt;98 %</td><td><span class="green">●</span> gut</td><td>Geringfügige Einschränkungen</td></tr>
+<tr><td>80–&lt;90 %</td><td><span class="yellow">●</span> eingeschränkt</td><td>Auffälligkeiten sollten geprüft werden</td></tr>
+<tr><td>60–&lt;80 %</td><td><span class="orange">●</span> deutlich eingeschränkt</td><td>Mehrere oder relevante Einschränkungen</td></tr>
+<tr><td>&lt;60 %</td><td><span class="red">●</span> kritisch</td><td>NPS-Daten bzw. Auswertung deutlich beeinträchtigt</td></tr>
+</table>
+
+<h2>Health-Berechnungsdetails</h2>
+<p>Die Tabelle zeigt nur tatsächlich wirksame Abzüge. Enthalten sind Kriterium, Abzug, Ursache, Details und Berechnungszeitpunkt. Bei 100 % Health sind keine Abzüge vorhanden.</p>
+
+<h2>Datenqualität, Modulstatus und Fehlerzähler</h2>
+<p><b>Daten gültig</b> zeigt, ob die für die Darstellung benötigten Eingangsdaten verwendbar sind. <b>Modulstatus</b> zeigt den Zustand der beteiligten NPS-Module. <b>Fehlerzähler</b> unterstützen die Diagnose; ein Wert größer als null weist auf registrierte Fehler hin, beschreibt aber noch nicht Ursache oder Schwere.</p>
+
+<h2>Typische Interpretation</h2>
+<table>
+<tr><td><b>Anlagenzustand OK + Health 100 %</b></td><td>Anlage und NPS-Datenlage sind unauffällig.</td></tr>
+<tr><td><b>Anlagenzustand OK + Health 85 %</b></td><td>Die Anlage kann technisch in Ordnung sein; NPS hat jedoch Einschränkungen erkannt.</td></tr>
+<tr><td><b>Anlagenzustand auffällig + Health 100 %</b></td><td>Die Datenbasis ist gut, gleichzeitig liegt ein technischer Anlagenhinweis vor.</td></tr>
+<tr><td><b>Health niedrig + Modulstatus nicht OK</b></td><td>Ein Problem innerhalb der Datenverarbeitung bzw. eines NPS-Moduls ist wahrscheinlich.</td></tr>
+</table>
+
+<div class="note"><b>Wichtig:</b> Anlagenzustand und NPS Health sind zwei unterschiedliche Bewertungen. Der Anlagenzustand beschreibt den technischen Zustand der Wärmepumpenanlage, NPS Health dagegen die Qualität, Vollständigkeit und Plausibilität der für NPS verfügbaren Informationen.</div>
+</div>
+
+<hr>
+
+<style>
+body{font-family:Arial,Helvetica,sans-serif;background:#121212;color:#E0E0E0;margin:0;padding:0;}
+.wrap{padding:18px;line-height:1.6;}
+h1{font-size:24px;margin:0 0 14px;}
+h2{font-size:18px;margin:22px 0 8px;}
+p{margin:8px 0 12px;}
+table{width:100%;border-collapse:collapse;margin:10px 0 16px;}
+th,td{padding:8px 10px;border-bottom:1px solid #333;vertical-align:top;text-align:left;}
+th{font-weight:600;color:#FFF;}
+.note{padding:10px 12px;border-left:4px solid #78909C;background:#1b1b1b;margin:14px 0;}
+.good{color:lime}.green{color:green}.yellow{color:yellow}.orange{color:orange}.red{color:red}.grey{color:grey}
+code{background:#1f1f1f;padding:2px 5px;border-radius:4px;}
+.small{font-size:13px;color:#BDBDBD}
+</style>
+
+<div class="wrap">
+<h1>NPS – Leistung &amp; Effizienz</h1>
+<p>Die Detailseite zeigt, wie effizient die Wärmepumpe elektrische Energie in nutzbare Wärme umsetzt. Sie verbindet aktuelle Leistungswerte mit COP-Kennzahlen und der Aufteilung zwischen Verdichter und Zusatzheizung.</p>
+
+<h2>Kennzahlen</h2>
+<table>
+<tr><th>Kennzahl</th><th>Bedeutung</th></tr>
+<tr><td>Elektrische Leistung</td><td>Aktuell von der Wärmepumpenanlage aufgenommene elektrische Leistung.</td></tr>
+<tr><td>Wärmeleistung</td><td>Aktuell von der Anlage bereitgestellte thermische Leistung.</td></tr>
+<tr><td>Live-COP</td><td>Momentanes Verhältnis von Wärmeleistung zu elektrischer Leistung.</td></tr>
+<tr><td>COP gesamt</td><td>Verhältnis von erzeugter Wärme zu eingesetzter elektrischer Energie für den Gesamtbetrieb.</td></tr>
+<tr><td>COP Heizung</td><td>Effizienz des Betriebs für die Raumheizung.</td></tr>
+<tr><td>COP Warmwasser</td><td>Effizienz der Warmwasserbereitung.</td></tr>
+<tr><td>Verdichteranteil</td><td>Anteil der erzeugten Wärmemenge, der vom Verdichter bereitgestellt wurde.</td></tr>
+<tr><td>Zusatzheizungsanteil</td><td>Anteil der Wärmemenge aus der elektrischen Zusatzheizung.</td></tr>
+</table>
+
+<h2>COP verstehen</h2>
+<p><b>COP = erzeugte Wärme ÷ eingesetzte elektrische Energie.</b> Ein COP von 4,0 bedeutet beispielsweise, dass aus 1 kWh elektrischer Energie rechnerisch etwa 4 kWh Wärme bereitgestellt wurden.</p>
+<p>Der Live-COP ist eine Momentaufnahme und kann kurzfristig deutlich schwanken. Periodische COP-Werte über längere Zeiträume sind für die Effizienzbewertung aussagekräftiger.</p>
+
+<h2>COP-Ampel</h2>
+<table>
+<tr><th>COP</th><th>Bewertung</th></tr>
+<tr><td>≥ 4,5</td><td><span class="good">●</span> hervorragend</td></tr>
+<tr><td>3,8–&lt;4,5</td><td><span class="green">●</span> gut</td></tr>
+<tr><td>3,0–&lt;3,8</td><td><span class="yellow">●</span> normal</td></tr>
+<tr><td>2,2–&lt;3,0</td><td><span class="orange">●</span> auffällig</td></tr>
+<tr><td>0,1–&lt;2,2</td><td><span class="red">●</span> kritisch</td></tr>
+<tr><td>&lt;0,1</td><td><span class="grey">●</span> keine sinnvolle Bewertung / inaktiv</td></tr>
+</table>
+
+<h2>Verdichter- und Zusatzheizungsanteil</h2>
+<p>Verdichteranteil und Zusatzheizungsanteil ergänzen sich grundsätzlich zu ungefähr 100 %. Ein hoher Verdichteranteil ist energetisch meist günstig. Zusatzheizung ist jedoch nicht automatisch ein Fehler und kann bei hoher Last oder besonderen Betriebszuständen erforderlich sein.</p>
+
+<h2>Leistung ist nicht Energie</h2>
+<p><b>kW</b> beschreibt die momentane Leistung. <b>kWh</b> beschreibt die über einen Zeitraum aufsummierte Energiemenge.</p>
+
+<h2>Typische Interpretation</h2>
+<table>
+<tr><td>Hoher COP + hoher Verdichteranteil</td><td>Energetisch günstiger Wärmepumpenbetrieb.</td></tr>
+<tr><td>Niedriger Live-COP für kurze Zeit</td><td>Noch kein Hinweis auf ein Problem; Betriebsart und Verlauf betrachten.</td></tr>
+<tr><td>COP Warmwasser niedriger als COP Heizung</td><td>Grundsätzlich erwartbar, da höhere Temperaturen erforderlich sind.</td></tr>
+<tr><td>Zusatzheizungsanteil steigt</td><td>Ursache prüfen, aber nicht automatisch als Störung bewerten.</td></tr>
+</table>
+
+<div class="note"><b>Wichtig:</b> Einzelne COP-Werte nie isoliert bewerten. Außentemperatur, Vorlauftemperatur, Betriebsart, Warmwasserbereitung, Enteisung und Zusatzheizung beeinflussen die Effizienz.</div>
+</div>
+
+<hr>
+
+<style>
+body{font-family:Arial,Helvetica,sans-serif;background:#121212;color:#E0E0E0;margin:0;padding:0;}
+.wrap{padding:18px;line-height:1.6;}
+h1{font-size:24px;margin:0 0 14px;}
+h2{font-size:18px;margin:22px 0 8px;}
+p{margin:8px 0 12px;}
+table{width:100%;border-collapse:collapse;margin:10px 0 16px;}
+th,td{padding:8px 10px;border-bottom:1px solid #333;vertical-align:top;text-align:left;}
+th{font-weight:600;color:#FFF;}
+.note{padding:10px 12px;border-left:4px solid #78909C;background:#1b1b1b;margin:14px 0;}
+.good{color:lime}.green{color:green}.yellow{color:yellow}.orange{color:orange}.red{color:red}.grey{color:grey}
+code{background:#1f1f1f;padding:2px 5px;border-radius:4px;}
+.small{font-size:13px;color:#BDBDBD}
+</style>
+
+<div class="wrap">
+<h1>NPS – Energie</h1>
+<p>Die Detailseite zeigt die über einen Zeitraum aufsummierten elektrischen und thermischen Energiemengen der Wärmepumpe. Sie beantwortet vor allem: Wie viel Strom wurde eingesetzt, wie viel Wärme daraus erzeugt und mit welcher Effizienz?</p>
+
+<h2>Kennzahlen</h2>
+<table>
+<tr><th>Kennzahl</th><th>Bedeutung</th></tr>
+<tr><td>Strom</td><td>Aufgenommene elektrische Energie in kWh.</td></tr>
+<tr><td>Wärme gesamt</td><td>Insgesamt bereitgestellte thermische Energie in kWh.</td></tr>
+<tr><td>Wärme Heizung</td><td>Wärmemenge für die Raumheizung.</td></tr>
+<tr><td>Wärme Warmwasser</td><td>Wärmemenge für die Warmwasserbereitung.</td></tr>
+<tr><td>Wärme Verdichter</td><td>Durch den Wärmepumpenprozess erzeugte Wärmemenge.</td></tr>
+<tr><td>Wärme Zusatzheizung</td><td>Durch die elektrische Zusatzheizung bereitgestellte Wärmemenge.</td></tr>
+<tr><td>COP gesamt / Heizung / Warmwasser</td><td>Energiebezogene Effizienz für den jeweiligen Betrachtungsbereich.</td></tr>
+<tr><td>Verdichteranteil / Zusatzheizungsanteil</td><td>Anteile der bereitgestellten Wärme nach Erzeugungsart.</td></tr>
+</table>
+
+<h2>Leistung und Energie unterscheiden</h2>
+<p><b>kW = Leistung</b>, also momentane Aufnahme oder Erzeugung. <b>kWh = Energie</b>, also über einen Zeitraum aufsummierte Leistung.</p>
+
+<h2>Datenbasis</h2>
+<p>Die NPS-Wärmemengen stammen aus den VirtualMeters. Sie bilden die zentrale Datenquelle für die nachfolgenden Energie- und Effizienzberechnungen.</p>
+
+<h2>COP im Energieverlauf</h2>
+<p><b>COP = erzeugte Wärmeenergie ÷ eingesetzte elektrische Energie.</b> Für die Bewertung gelten dieselben NPS-Grenzen wie auf der Seite Leistung &amp; Effizienz.</p>
+
+<h2>Zeiträume</h2>
+<p>Verglichen werden laufende und abgeschlossene Perioden wie Heute, Gestern, Woche, Monat oder Jahr. Gleich lange bzw. vergleichbare Zeiträume sollten bevorzugt miteinander verglichen werden.</p>
+
+<h2>Diagramme richtig lesen</h2>
+<p>Einzelne Ausschläge sind weniger aussagekräftig als Trends und wiederkehrende Veränderungen. Ein sinkender COP sollte gemeinsam mit Außentemperatur, Vorlauf, Warmwasserbetrieb, Zusatzheizung und Enteisungen betrachtet werden.</p>
+
+<h2>Typische Interpretation</h2>
+<table>
+<tr><td>Stromverbrauch und Wärmemenge steigen ähnlich stark</td><td>Zunächst plausibel bei höherem Wärmebedarf.</td></tr>
+<tr><td>Strom steigt deutlich stärker als Wärme</td><td>COP sinkt; Betriebsbedingungen und Zusatzheizung prüfen.</td></tr>
+<tr><td>Wärmebedarf steigt bei fallender Außentemperatur</td><td>Grundsätzlich erwartbares Verhalten.</td></tr>
+<tr><td>Ein einzelner schlechter Tag</td><td>Noch keine belastbare Aussage; Woche bzw. Monat vergleichen.</td></tr>
+</table>
+
+<div class="note"><b>Hinweis:</b> Die dargestellten Energiemengen und COP-Werte sind Auswertungswerte. Ihre Genauigkeit hängt von Qualität und Aktualität der zugrunde liegenden Daten ab.</div>
+</div>
+
+<hr>
+
+<style>
+body{font-family:Arial,Helvetica,sans-serif;background:#121212;color:#E0E0E0;margin:0;padding:0;}
+.wrap{padding:18px;line-height:1.6;}
+h1{font-size:24px;margin:0 0 14px;}
+h2{font-size:18px;margin:22px 0 8px;}
+p{margin:8px 0 12px;}
+table{width:100%;border-collapse:collapse;margin:10px 0 16px;}
+th,td{padding:8px 10px;border-bottom:1px solid #333;vertical-align:top;text-align:left;}
+th{font-weight:600;color:#FFF;}
+.note{padding:10px 12px;border-left:4px solid #78909C;background:#1b1b1b;margin:14px 0;}
+.good{color:lime}.green{color:green}.yellow{color:yellow}.orange{color:orange}.red{color:red}.grey{color:grey}
+code{background:#1f1f1f;padding:2px 5px;border-radius:4px;}
+.small{font-size:13px;color:#BDBDBD}
+</style>
+
+<div class="wrap">
+<h1>NPS – Verdichter</h1>
+<p>Die Detailseite zeigt, wie der Verdichter aktuell arbeitet und wie sich sein Betrieb über den Tag entwickelt. Im Mittelpunkt stehen Aktivstatus, Betriebsart, Frequenz, Starts, Laufzeit, Zyklusdauer und Modulation.</p>
+
+<h2>Kennzahlen</h2>
+<table>
+<tr><th>Kennzahl</th><th>Bedeutung</th></tr>
+<tr><td>Verdichter aktiv</td><td>Zeigt, ob der Verdichter momentan läuft.</td></tr>
+<tr><td>Betriebsart / Zyklustyp</td><td>Ordnet den aktuellen Verdichterlauf dem Betriebszweck zu.</td></tr>
+<tr><td>Frequenz</td><td>Aktuelle Verdichterfrequenz in Hz; Maß für den Modulationsgrad.</td></tr>
+<tr><td>Starts gesamt / heute</td><td>Kumulierte bzw. heutige Anzahl der Verdichterstarts.</td></tr>
+<tr><td>Laufzeit gesamt / heute</td><td>Kumulierte bzw. heutige Verdichterlaufzeit.</td></tr>
+<tr><td>Ø Zyklusdauer</td><td>Mittlere Dauer der heutigen Verdichterläufe.</td></tr>
+<tr><td>Ø Frequenz</td><td>Zeitgewichtete mittlere Verdichterfrequenz während des heutigen Betriebs.</td></tr>
+</table>
+
+<h2>Frequenz und Modulation</h2>
+<p>Eine niedrige Frequenz bedeutet geringere momentane Verdichterleistung, eine höhere Frequenz entsprechend mehr Leistung. Eine niedrige Frequenz ist nicht automatisch gut und eine hohe Frequenz nicht automatisch schlecht. Entscheidend ist, ob die Leistung zum aktuellen Bedarf passt.</p>
+
+<h2>Starts und Laufzeit</h2>
+<p>Viele Starts innerhalb kurzer Zeit können auf kurze Zyklen hindeuten. Die reine Anzahl reicht jedoch nicht für eine Bewertung aus. Starts und Zyklusdauer sollten immer gemeinsam betrachtet werden. Eine hohe tägliche Laufzeit kann bei kaltem Wetter völlig normal sein.</p>
+
+<h2>Modulationsanalyse</h2>
+<p>Ein typischer Verlauf kann lauten: Start → höhere Frequenz → Annäherung an den Wärmebedarf → Abmodulation → längerer stabiler Betrieb. Wiederholte Folgen aus Start → kurzer Lauf → Abschaltung → kurzer Stillstand → erneuter Start können auf häufiges Takten hindeuten.</p>
+
+<h2>Diagrammfarben</h2>
+<table>
+<tr><td>Verdichterfrequenz</td><td><code>#26A69A</code></td></tr>
+<tr><td>Außentemperatur</td><td><code>#42A5F5</code></td></tr>
+</table>
+<p class="small">Kurvenfarben dienen der Wiedererkennung und sind keine Qualitätsbewertung.</p>
+
+<h2>Typische Interpretation</h2>
+<table>
+<tr><td>Langer Heizzyklus + konstante niedrige/moderate Frequenz</td><td>Spricht grundsätzlich für gleichmäßigen modulierenden Betrieb.</td></tr>
+<tr><td>Hohe Frequenz bei niedriger Außentemperatur</td><td>Kann aufgrund höheren Wärmebedarfs völlig normal sein.</td></tr>
+<tr><td>Viele Starts + sehr kurze Zyklusdauer</td><td>Mögliches häufiges Takten; Temperaturverlauf, Wärmeabnahme und Regelung prüfen.</td></tr>
+</table>
+
+<div class="note"><b>Wichtig:</b> Verdichterfrequenz, Starts und Laufzeit besitzen für sich allein keine NPS-Qualitätsampel. Erst das Zusammenspiel mit Zyklusdauer, Temperaturen, Außentemperatur, Betriebsart und Effizienz ermöglicht eine sinnvolle Bewertung.</div>
+</div>
+
+<hr>
+
+<style>
+body{font-family:Arial,Helvetica,sans-serif;background:#121212;color:#E0E0E0;margin:0;padding:0;}
+.wrap{padding:18px;line-height:1.6;}
+h1{font-size:24px;margin:0 0 14px;}
+h2{font-size:18px;margin:22px 0 8px;}
+p{margin:8px 0 12px;}
+table{width:100%;border-collapse:collapse;margin:10px 0 16px;}
+th,td{padding:8px 10px;border-bottom:1px solid #333;vertical-align:top;text-align:left;}
+th{font-weight:600;color:#FFF;}
+.note{padding:10px 12px;border-left:4px solid #78909C;background:#1b1b1b;margin:14px 0;}
+.good{color:lime}.green{color:green}.yellow{color:yellow}.orange{color:orange}.red{color:red}.grey{color:grey}
+code{background:#1f1f1f;padding:2px 5px;border-radius:4px;}
+.small{font-size:13px;color:#BDBDBD}
+</style>
+
+<div class="wrap">
+<h1>NPS – Temperaturen</h1>
+<p>Die Detailseite zeigt die wichtigsten thermischen Betriebsgrößen der Wärmepumpe. Sie hilft zu beurteilen, ob die Anlage die angeforderte Vorlauftemperatur erreicht, wie groß die Differenz zwischen Vor- und Rücklauf ist und unter welchen Außen- und Warmwasserbedingungen die Wärmepumpe arbeitet.</p>
+
+<h2>Kennzahlen</h2>
+<table>
+<tr><th>Kennzahl</th><th>Bedeutung</th></tr>
+<tr><td>Außentemperatur</td><td>Aktuelle von NPS verwendete Außentemperatur.</td></tr>
+<tr><td>Vorlauf SOLL</td><td>Von der Regelung aktuell angeforderte Vorlauftemperatur.</td></tr>
+<tr><td>Vorlauf IST</td><td>Tatsächlich gemessene Vorlauftemperatur.</td></tr>
+<tr><td>Vorlaufabweichung</td><td>Differenz Vorlauf IST − Vorlauf SOLL in Kelvin.</td></tr>
+<tr><td>Rücklauf</td><td>Temperatur des Heizwassers beim Rücklauf zur Wärmepumpe.</td></tr>
+<tr><td>Spreizung</td><td>Temperaturdifferenz zwischen Vorlauf und Rücklauf.</td></tr>
+<tr><td>Warmwasser oben / BT7</td><td>Temperatur im oberen Bereich des Warmwasserspeichers.</td></tr>
+<tr><td>WW-Ladetemperatur / BT6</td><td>Temperatur im Bereich der Warmwasserladung.</td></tr>
+<tr><td>Verdichterfrequenz</td><td>Zusätzliche Vergleichsgröße für Temperaturveränderungen und Modulation.</td></tr>
+</table>
+
+<h2>Vorlaufabweichung</h2>
+<p><b>Vorlaufabweichung = Vorlauf IST − Vorlauf SOLL.</b> Negativ bedeutet kälter als angefordert, 0 K entspricht dem Sollwert, positiv bedeutet wärmer als angefordert. Die beste NPS-Bewertung liegt ungefähr bei −0,5 K bis +0,5 K; mit zunehmender Abweichung wechselt die Bewertung über Grün, Gelb, Orange zu Rot.</p>
+
+<h2>Spreizung</h2>
+<p><b>Spreizung = Vorlauf − Rücklauf.</b> Sie hängt unter anderem von Volumenstrom, Wärmeabnahme, Verdichterleistung und Betriebszustand ab. NPS verwendet hierfür keine allgemeine Qualitätsampel.</p>
+
+<h2>Warmwasser BT7 und BT6</h2>
+<p><b>BT7</b> beschreibt die Temperatur im oberen Speicherbereich und ist besonders relevant für die verfügbare Warmwassertemperatur. <b>BT6</b> wird zur Beurteilung der Warmwasserladung herangezogen. Beide Messwerte erfüllen unterschiedliche Aufgaben und sollten nicht gleichgesetzt werden.</p>
+
+<h2>Diagrammfarben</h2>
+<table>
+<tr><td>Außentemperatur</td><td><code>#42A5F5</code></td></tr>
+<tr><td>Vorlauf IST</td><td><code>#EF6C3E</code></td></tr>
+<tr><td>Vorlauf SOLL</td><td><code>#FBC02D</code></td></tr>
+<tr><td>Rücklauf</td><td><code>#AB47BC</code></td></tr>
+<tr><td>Warmwasser oben / BT7</td><td><code>#EC407A</code></td></tr>
+<tr><td>WW-Ladetemperatur / BT6</td><td><code>#FF9800</code></td></tr>
+<tr><td>Verdichterfrequenz</td><td><code>#26A69A</code></td></tr>
+</table>
+
+<h2>Typische Interpretation</h2>
+<table>
+<tr><td>Vorlauf IST nahe SOLL</td><td>Regelung erreicht die aktuell angeforderte Temperatur.</td></tr>
+<tr><td>Vorlauf IST kurzfristig unter SOLL</td><td>Kann nach Verdichterstart oder bei steigender Wärmeanforderung normal sein.</td></tr>
+<tr><td>Vorlauf IST dauerhaft deutlich unter SOLL</td><td>Wärmeleistung, Verdichterfrequenz, Volumenstrom und Betriebszustand mit untersuchen.</td></tr>
+<tr><td>BT7 sinkt</td><td>Warmwasservorrat im oberen Speicherbereich kühlt ab bzw. wird genutzt.</td></tr>
+</table>
+
+<div class="note"><b>Wichtig:</b> Temperaturen immer als System betrachten. Vorlauf, Rücklauf, Sollwert, Außentemperatur und Verdichterfrequenz beeinflussen sich gegenseitig.</div>
+</div>
+
+<hr>
+
+<style>
+body{font-family:Arial,Helvetica,sans-serif;background:#121212;color:#E0E0E0;margin:0;padding:0;}
+.wrap{padding:18px;line-height:1.6;}
+h1{font-size:24px;margin:0 0 14px;}
+h2{font-size:18px;margin:22px 0 8px;}
+p{margin:8px 0 12px;}
+table{width:100%;border-collapse:collapse;margin:10px 0 16px;}
+th,td{padding:8px 10px;border-bottom:1px solid #333;vertical-align:top;text-align:left;}
+th{font-weight:600;color:#FFF;}
+.note{padding:10px 12px;border-left:4px solid #78909C;background:#1b1b1b;margin:14px 0;}
+.good{color:lime}.green{color:green}.yellow{color:yellow}.orange{color:orange}.red{color:red}.grey{color:grey}
+code{background:#1f1f1f;padding:2px 5px;border-radius:4px;}
+.small{font-size:13px;color:#BDBDBD}
+</style>
+
+<div class="wrap">
+<h1>NPS – Zyklus</h1>
+<p>Die Detailseite betrachtet einzelne abgeschlossene Verdichterläufe. Dadurch lässt sich beurteilen, wie lange ein Zyklus lief, welchem Zweck er diente, wie viel Strom und Wärme umgesetzt wurden, welchen COP er erreichte und wie NPS seine Qualität bewertet.</p>
+
+<h2>Was ist ein Zyklus?</h2>
+<p>Ein Zyklus beschreibt einen zusammenhängenden Verdichterlauf vom Start bis zum Ende. NPS unterscheidet insbesondere <b>Heizung</b> und <b>Warmwasser</b>. Beide Zyklustypen sollten bevorzugt jeweils untereinander verglichen werden.</p>
+
+<h2>Kennzahlen</h2>
+<table>
+<tr><th>Kennzahl</th><th>Bedeutung</th></tr>
+<tr><td>Typ</td><td>Zweck des Zyklus, insbesondere Heizung oder Warmwasser.</td></tr>
+<tr><td>Start / Ende</td><td>Zeitpunkte des Beginns und Abschlusses.</td></tr>
+<tr><td>Dauer</td><td>Gesamte Laufzeit des Zyklus.</td></tr>
+<tr><td>Strom</td><td>Während des Zyklus eingesetzte elektrische Energie.</td></tr>
+<tr><td>Wärme</td><td>Während des Zyklus erzeugte thermische Energie.</td></tr>
+<tr><td>COP</td><td>Verhältnis von Wärme zu Strom des abgeschlossenen Zyklus.</td></tr>
+<tr><td>Ø Frequenz</td><td>Mittlere Verdichterfrequenz während des Zyklus.</td></tr>
+<tr><td>Qualität</td><td>NPS-Zyklusbewertung von 0 bis 100 %.</td></tr>
+</table>
+
+<h2>Zyklusqualität</h2>
+<table>
+<tr><th>Qualität</th><th>Bewertung</th></tr>
+<tr><td>95–100 %</td><td><span class="good">●</span> hervorragend</td></tr>
+<tr><td>85–&lt;95 %</td><td><span class="green">●</span> gut</td></tr>
+<tr><td>70–&lt;85 %</td><td><span class="yellow">●</span> normal</td></tr>
+<tr><td>50–&lt;70 %</td><td><span class="orange">●</span> auffällig</td></tr>
+<tr><td>1–&lt;50 %</td><td><span class="red">●</span> kritisch</td></tr>
+<tr><td>0 %</td><td><span class="grey">●</span> Sonderfall / keine reguläre Bewertung</td></tr>
+</table>
+
+<h2>Zyklushistorie</h2>
+<p>Die Historie zeigt Start, Typ, Dauer, COP, Wärme, Strom und Qualität der letzten abgeschlossenen Zyklen. Besonders sinnvoll ist der Vergleich gleicher Zyklustypen: Heizung mit Heizung, Warmwasser mit Warmwasser.</p>
+
+<h2>Diagrammfarben</h2>
+<table>
+<tr><td>Zyklusdauer</td><td><code>#42A5F5</code></td></tr>
+<tr><td>Zyklusqualität</td><td><code>#66BB6A</code></td></tr>
+</table>
+
+<h2>Typische Interpretation</h2>
+<table>
+<tr><td>Langer Heizzyklus + guter COP + hohe Qualität</td><td>Spricht grundsätzlich für einen gleichmäßigen und effizienten Heizbetrieb.</td></tr>
+<tr><td>Kurzer Zyklus + niedrige Qualität</td><td>Kann auf ungünstiges Taktverhalten hinweisen; Wiederholungen beobachten.</td></tr>
+<tr><td>Kurzer Warmwasserzyklus + gute Qualität</td><td>Kann vollkommen normal sein.</td></tr>
+<tr><td>Mehrere Heizzyklen mit niedriger Qualität</td><td>Verdichter-, Temperatur- und Effizienzdaten derselben Zeiträume untersuchen.</td></tr>
+</table>
+
+<div class="note"><b>Wichtig:</b> Nicht einen einzelnen Zyklus optimieren, sondern Muster beurteilen. Ein einzelner kurzer oder ineffizienter Zyklus kann durch einen besonderen Betriebszustand entstehen.</div>
+</div>
+
+<hr>
+
+<style>
+body{font-family:Arial,Helvetica,sans-serif;background:#121212;color:#E0E0E0;margin:0;padding:0;}
+.wrap{padding:18px;line-height:1.6;}
+h1{font-size:24px;margin:0 0 14px;}
+h2{font-size:18px;margin:22px 0 8px;}
+p{margin:8px 0 12px;}
+table{width:100%;border-collapse:collapse;margin:10px 0 16px;}
+th,td{padding:8px 10px;border-bottom:1px solid #333;vertical-align:top;text-align:left;}
+th{font-weight:600;color:#FFF;}
+.note{padding:10px 12px;border-left:4px solid #78909C;background:#1b1b1b;margin:14px 0;}
+.good{color:lime}.green{color:green}.yellow{color:yellow}.orange{color:orange}.red{color:red}.grey{color:grey}
+code{background:#1f1f1f;padding:2px 5px;border-radius:4px;}
+.small{font-size:13px;color:#BDBDBD}
+</style>
+
+<div class="wrap">
+<h1>NPS – Ereignisse</h1>
+<p>Die Detailseite dokumentiert relevante Zustandsänderungen und besondere Vorgänge, die von NPS erkannt werden. Sie hilft dabei, den zeitlichen Ablauf des Anlagenbetriebs nachzuvollziehen und Auffälligkeiten mit anderen NPS-Daten in Verbindung zu bringen.</p>
+
+<h2>Typische Ereignisse</h2>
+<p>Beispiele sind Beginn oder Ende eines Heiz- oder Warmwasserzyklus, Verdichterstart oder -stopp, Aktivierung der Zusatzheizung, Enteisungsbeginn oder -ende sowie Warnungen oder Fehler innerhalb der NPS-Verarbeitung.</p>
+
+<h2>Statusanzeigen</h2>
+<table>
+<tr><th>Anzeige</th><th>Bedeutung</th></tr>
+<tr><td>Zyklus aktiv</td><td>Ob aktuell ein erfasster Betriebszyklus läuft.</td></tr>
+<tr><td>Verdichter</td><td>Ob der Verdichter momentan aktiv ist.</td></tr>
+<tr><td>Zusatzheizung</td><td>Ob aktuell elektrische Zusatzheizung eingesetzt wird.</td></tr>
+<tr><td>Enteisung</td><td>Ob momentan ein Enteisungsvorgang läuft.</td></tr>
+<tr><td>Aktueller Prozess / Status</td><td>Von NPS erkannter Betriebszustand.</td></tr>
+</table>
+
+<h2>Statusfarben</h2>
+<table>
+<tr><td>Aktiv</td><td><code>#C45A32</code></td></tr>
+<tr><td>Inaktiv</td><td><code>#78909C</code></td></tr>
+<tr><td>Unbekannt</td><td>Grau</td></tr>
+</table>
+<p class="small">Diese Farben kennzeichnen Zustände und sind keine Qualitätsampel.</p>
+
+<h2>Kritikalität</h2>
+<table>
+<tr><th>Kritikalität</th><th>Bedeutung</th></tr>
+<tr><td>info</td><td>Informative Meldung über einen normalen Zustand oder Vorgang.</td></tr>
+<tr><td>success</td><td>Vorgang wurde erfolgreich bzw. erwartungsgemäß abgeschlossen.</td></tr>
+<tr><td>warning</td><td>Auffälligkeit, die beobachtet bzw. geprüft werden sollte.</td></tr>
+<tr><td>error</td><td>Fehler oder Vorgang, der eine genauere Untersuchung erfordert.</td></tr>
+</table>
+
+<h2>NPS-Ereignis und NIBE-Alarm</h2>
+<p>Ein NPS-Ereignis ist nicht automatisch ein NIBE-Alarm. NPS erzeugt eigene Ereignisse zur Dokumentation von Betriebsabläufen und internen Zustandsänderungen. Ein NIBE-Alarm stammt dagegen aus der Wärmepumpensteuerung selbst.</p>
+
+<h2>Typische Interpretation</h2>
+<table>
+<tr><td>info bei normalem Betriebswechsel</td><td>Reine Betriebsinformation.</td></tr>
+<tr><td>success nach Abschluss</td><td>Erwartungsgemäß abgeschlossener Prozess.</td></tr>
+<tr><td>warning einmalig</td><td>Ursache und zeitlichen Zusammenhang prüfen.</td></tr>
+<tr><td>wiederkehrende warning-Meldungen</td><td>Interessanter als ein einzelner Ausreißer.</td></tr>
+<tr><td>error</td><td>Mit Systemstatus, NIBE-Alarmstatus und Messwerten zum selben Zeitpunkt vergleichen.</td></tr>
+</table>
+
+<div class="note"><b>Wichtig:</b> Ereignisse liefern Kontext, keine alleinige Diagnose. Besonders aussagekräftig sind die Reihenfolge mehrerer Ereignisse und die gleichzeitig aufgezeichneten Messwerte.</div>
+</div>
+
+<hr>
+
+<style>
+body{font-family:Arial,Helvetica,sans-serif;background:#121212;color:#E0E0E0;margin:0;padding:0;}
+.wrap{padding:18px;line-height:1.6;}
+h1{font-size:24px;margin:0 0 14px;}
+h2{font-size:18px;margin:22px 0 8px;}
+p{margin:8px 0 12px;}
+table{width:100%;border-collapse:collapse;margin:10px 0 16px;}
+th,td{padding:8px 10px;border-bottom:1px solid #333;vertical-align:top;text-align:left;}
+th{font-weight:600;color:#FFF;}
+.note{padding:10px 12px;border-left:4px solid #78909C;background:#1b1b1b;margin:14px 0;}
+.good{color:lime}.green{color:green}.yellow{color:yellow}.orange{color:orange}.red{color:red}.grey{color:grey}
+code{background:#1f1f1f;padding:2px 5px;border-radius:4px;}
+.small{font-size:13px;color:#BDBDBD}
+</style>
+
+<div class="wrap">
+<h1>NPS – Enteisung</h1>
+<p>Die Detailseite zeigt die von NPS erkannten Abtauvorgänge der Außeneinheit. Sie hilft zu beurteilen, wann und wie häufig enteist wird, wie lange die Vorgänge dauern und wie sich die Anlage während einer Enteisung verhält.</p>
+
+<h2>Warum wird enteist?</h2>
+<p>Im Heizbetrieb kann sich unter geeigneten Temperatur- und Feuchtebedingungen Eis am Verdampfer bilden. Diese Vereisung behindert den Wärmeübergang. Die Wärmepumpe muss deshalb regelmäßig einen Enteisungs- bzw. Abtauvorgang durchführen.</p>
+
+<h2>Kennzahlen</h2>
+<table>
+<tr><th>Kennzahl</th><th>Bedeutung</th></tr>
+<tr><td>Enteisung aktiv</td><td>Ob aktuell ein Enteisungsvorgang läuft.</td></tr>
+<tr><td>Anzahl</td><td>Anzahl der von NPS erkannten Enteisungsvorgänge.</td></tr>
+<tr><td>Abgeschlossene Enteisungen</td><td>Anzahl vollständig erkannter bzw. abgeschlossener Vorgänge.</td></tr>
+<tr><td>Aktuelle Dauer</td><td>Bisherige Dauer einer momentan laufenden Enteisung.</td></tr>
+<tr><td>Letzte Dauer</td><td>Dauer des zuletzt abgeschlossenen Enteisungsvorgangs.</td></tr>
+<tr><td>Letzter Start</td><td>Zeitpunkt, zu dem die letzte Enteisung begonnen hat.</td></tr>
+</table>
+
+<h2>Keine pauschale Ampel</h2>
+<p>NPS besitzt derzeit keine pauschale Qualitätsampel für Anzahl oder Dauer der Enteisungen. Eine starre Regel wie „mehr als x Enteisungen pro Tag = schlecht“ wäre ohne Berücksichtigung von Wetter- und Betriebsbedingungen irreführend.</p>
+
+<h2>Verhalten während einer Enteisung</h2>
+<p>Während des Abtauvorgangs können Verdichterfrequenz, Vorlauf, Rücklauf, Wärmeleistung und Live-COP kurzfristig deutlich verändert sein. Solche Werte sollten nicht wie normaler Heizbetrieb bewertet werden.</p>
+
+<h2>Diagrammfarben</h2>
+<table>
+<tr><td>Enteisung aktiv</td><td><code>#FF8F00</code></td></tr>
+<tr><td>Verdichterfrequenz</td><td><code>#26A69A</code></td></tr>
+<tr><td>Außentemperatur</td><td><code>#42A5F5</code></td></tr>
+</table>
+
+<h2>Typische Interpretation</h2>
+<table>
+<tr><td>Einzelne Enteisung bei passenden Witterungsbedingungen</td><td>Normaler Betriebsprozess.</td></tr>
+<tr><td>Mehrere Enteisungen bei feucht-kühlem Wetter</td><td>Können ebenfalls vollkommen normal sein.</td></tr>
+<tr><td>Enteisung aktiv + kurzfristige Veränderung von Vorlauf oder COP</td><td>Während des Abtauvorgangs grundsätzlich plausibel.</td></tr>
+<tr><td>Enteisungen werden deutlich häufiger oder länger</td><td>Verlauf genauer untersuchen und mit Außentemperatur sowie Verdichterbetrieb vergleichen.</td></tr>
+</table>
+
+<div class="note"><b>Wichtig:</b> Enteisung ist ein notwendiger Bestandteil des normalen Betriebs einer Luft/Wasser-Wärmepumpe. Nicht der einzelne Abtauvorgang ist entscheidend, sondern das Muster aus Häufigkeit, Dauer, Witterungsbedingungen und Anlagenverhalten.</div>
+</div>
+
+<hr>
+</body></html>
