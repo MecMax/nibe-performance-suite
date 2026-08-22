@@ -3,8 +3,8 @@
  * -----------------------------------------------------------------------------
  * Modul:               11_NPS_InfluxAdapter
  * Datei:               11_NPS_InfluxAdapter.js
- * Version:             1.0.2
- * Build:               2026-07-30
+ * Version:             1.0.4
+ * Build:               2026-08-22
  * Modulstatus:         STABIL
  * Architektur-Schicht: Persistenzzugriff / Historienadapter
  * Coding Standard:     NPS-CS-1.0
@@ -66,6 +66,13 @@
  *
  * Änderungsverlauf
  * ----------------
+ * 1.0.4 | 2026-08-22
+ *       | Architekturtrennung influxdb.0 / influxdb.1 ausdrücklich dokumentiert.
+ *       | influxdb.1 bleibt die Standardinstanz für die persistierten
+ *       | CycleAnalyzer-CycleReports und damit für den InfluxAdapter.
+ *       | Die zwischenzeitliche Umstellung auf influxdb.0 wird verworfen.
+ *       | Keine Änderung an Historienabfrage, Validierung, Deduplizierung,
+ *       | Typtrennung oder Refresh-Logik.
  * 1.0.2 | 2026-07-30
  *       | Architektur dokumentarisch präzisiert:
  *       | keine direkten Zugriffe auf ElectricalMeters, VirtualMeters oder
@@ -87,7 +94,7 @@
 
 const MODULE = Object.freeze({
     NAME: 'NPS InfluxAdapter',
-    VERSION: '1.0.2',
+    VERSION: '1.0.4',
     ROOT: '0_userdata.0.NPS.InfluxAdapter'
 });
 
