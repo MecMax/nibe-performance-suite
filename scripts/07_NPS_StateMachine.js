@@ -1,94 +1,103 @@
-/******************************************************************************
- * NIBE Performance Suite (NPS) für ioBroker
- * -----------------------------------------------------------------------------
- * Modul:               07_NPS_StateMachine
- * Datei:               07_NPS_StateMachine.js
- * Version:             1.2.0
- * Build:               2026-08-18
- * Modulstatus:         STABIL
- * Architektur-Schicht: Zustandsmodell / Prozesszustand
- * Coding Standard:     NPS-CS-1.0
- * Gerät:               NIBE S2125-12 + VVM S500
- * Lizenz:              MIT
- *
- * Aufgabe
- * -------
- * Bildet aus den standardisierten ProcessSignals einen tabellengesteuerten,
- * persistenten fachlichen Verdichterzustand. Das Modul verwaltet Start- und
- * Stoppzeit sowie die Laufzeit des aktuellen Verdichtertakts.
- *
- * Das Modul kennt keine Modbus-Register und keine Alias-Datenpunkte. Es erzeugt
- * keine Ereignishistorie, Benachrichtigungen oder Langzeitstatistiken.
- *
- * Öffentliche Schnittstelle (Public API)
- * --------------------------------------
- *
- * Eingänge (nur lesend)
- * ---------------------
- * 0_userdata.0.NPS.ProcessSignals.Verdichter.*
- * 0_userdata.0.NPS.ProcessSignals.Betriebsart.*
- * 0_userdata.0.NPS.ProcessSignals.Plausibilitaet.SignaleGueltig
- *
- * Zustände
- * --------
- * STILLSTAND, VORWÄRMUNG, STARTANFORDERUNG, ANLAUF, HEIZBETRIEB,
- * BRAUCHWASSERBETRIEB, POOLBETRIEB, KÜHLBETRIEB, ABTAUUNG, AUSLAUF, STÖRUNG
- *
- * Trigger
- * -------
- * - Ereignisgesteuerte Auswertung bei Änderung eines ProcessSignals
- * - Zyklische Auswertung alle 10 Sekunden für zeitabhängige Übergänge
- * - Einmalige Auswertung nach erfolgreicher Initialisierung
- *
- * Abhängigkeiten
- * ---------------
- * - 06_NPS_ProcessSignals.js, exakt Version 1.1.1
- * - ioBroker JavaScript-Adapter
- *
- * Architekturregeln
- * -----------------
- * - Liest ausschließlich die Public API von ProcessSignals
- * - Single Writer für StateMachine.Current.*
- * - Persistiert nur den für Wiederanlauf erforderlichen Automatenkontext
- * - EventEngine und Analyse-Module konsumieren die veröffentlichten Zustände
- * - Keine Zusammenlegung mit ProcessSignals oder EventEngine
- *
- * Änderungsverlauf
- * ----------------
- * 1.1.2 | 2026-08-08
- *       | Betriebsart wird vor dem Zustandswechsel veröffentlicht. Dadurch
- *       | liest die EventEngine beim Ereignis VERDICHTER_GESTARTET bereits
- *       | die zum Zyklusstart gültige Betriebsart (z. B. BRAUCHWASSER).
- * 1.1.1 | 2026-07-30
- *       | Korrektur der Zyklusende-Erkennung: Der Übergang von AUSLAUF
- *       | nach STILLSTAND wird nach Ablauf der Auslaufzeit allein durch
- *       | den tatsächlich stehenden Verdichter ausgelöst. Ein weiterhin
- *       | anliegender Bedarf verhindert das Zyklusende nicht mehr.
- *       | Ein neuer Bedarf wird anschließend aus STILLSTAND regulär als
- *       | STARTANFORDERUNG bzw. ANLAUF verarbeitet.
- * 1.1.0 | 2026-07-26
- *       | Abhängigkeit auf ProcessSignals 1.1.0 aktualisiert.
- *       | Die StateMachine bleibt alleinige fachliche Quelle für
- *       | StateMachine.Current.State und OperatingMode.
- *       | Rohwerte eines nicht verifizierten Verdichterstatusregisters
- *       | werden nicht verwendet.
- * 1.0.1 | 2026-07-20
- *       | Header auf NPS-CS-1.0 erweitert; Public API, Zustandsmodell,
- *       | Trigger, Abhängigkeiten und Modulgrenzen dokumentiert.
- *       | Abhängigkeit auf ProcessSignals 1.0.1 synchronisiert.
- *       | Keine Änderung der Zustands- oder Übergangslogik.
- * 1.0.0 | 2026-07-14
- *       | Produktive Erstversion.
- * *
- * Korrektur 2026-08-18
- * - Public API nach Restore des persistenten StateMachine-Zustands sofort initialisiert.
-*****************************************************************************/
+/*****************************************************************************/
+/* NIBE Performance Suite (NPS) für ioBroker                                */
+/* ------------------------------------------------------------------------- */
+/* Modul:               07_NPS_StateMachine                                  */
+/* Datei:               07_NPS_StateMachine.js                               */
+/* Version:             1.2.1                                                 */
+/* Build:               2026-08-22                                            */
+/* Modulstatus:         STABIL                                                 */
+/* Architektur-Schicht: Zustandsmodell / Prozesszustand                       */
+/* Coding Standard:     NPS-CS-1.0                                            */
+/* Gerät:               NIBE S2125-12 + VVM S500                              */
+/* Lizenz:              MIT                                                    */
+/*                                                                           */
+/* Aufgabe                                                                   */
+/* -------                                                                   */
+/* Bildet aus den standardisierten ProcessSignals einen tabellengesteuerten, */
+/* persistenten fachlichen Verdichterzustand. Das Modul verwaltet Start- und */
+/* Stoppzeit sowie die Laufzeit des aktuellen Verdichtertakts.               */
+/*                                                                           */
+/* Das Modul kennt keine Modbus-Register und keine Alias-Datenpunkte. Es     */
+/* erzeugt keine Ereignishistorie, Benachrichtigungen oder                   */
+/* Langzeitstatistiken.                                                       */
+/*                                                                           */
+/* Öffentliche Schnittstelle (Public API)                                    */
+/* --------------------------------------                                    */
+/*                                                                           */
+/* Eingänge (nur lesend)                                                     */
+/* ---------------------                                                     */
+/* 0_userdata.0.NPS.ProcessSignals.Verdichter.*                              */
+/* 0_userdata.0.NPS.ProcessSignals.Betriebsart.*                             */
+/* 0_userdata.0.NPS.ProcessSignals.Plausibilitaet.SignaleGueltig             */
+/*                                                                           */
+/* Zustände                                                                  */
+/* --------                                                                  */
+/* STILLSTAND, VORWÄRMUNG, STARTANFORDERUNG, ANLAUF, HEIZBETRIEB,           */
+/* BRAUCHWASSERBETRIEB, POOLBETRIEB, KÜHLBETRIEB, ABTAUUNG, AUSLAUF,        */
+/* STÖRUNG                                                                    */
+/*                                                                           */
+/* Trigger                                                                   */
+/* -------                                                                   */
+/* - Ereignisgesteuerte Auswertung bei Änderung eines ProcessSignals        */
+/* - Zyklische Auswertung alle 10 Sekunden für zeitabhängige Übergänge       */
+/* - Einmalige Auswertung nach erfolgreicher Initialisierung                 */
+/*                                                                           */
+/* Abhängigkeiten                                                            */
+/* ---------------                                                           */
+/* - 06_NPS_ProcessSignals.js, exakt Version 1.1.1                           */
+/* - ioBroker JavaScript-Adapter                                             */
+/*                                                                           */
+/* Architekturregeln                                                        */
+/* -----------------                                                        */
+/* - Liest ausschließlich die Public API von ProcessSignals                  */
+/* - Single Writer für StateMachine.Current.*                                */
+/* - Persistiert nur den für Wiederanlauf erforderlichen Automatenkontext    */
+/* - EventEngine und Analyse-Module konsumieren die veröffentlichten Zustände*/
+/* - Keine Zusammenlegung mit ProcessSignals oder EventEngine                */
+/*                                                                           */
+/* Änderungsverlauf                                                         */
+/* ----------------                                                         */
+/* 1.2.1 | 2026-08-22                                                       */
+/*       | Bugfix: Current.Runtime wird beim Übergang von einem laufenden    */
+/*       | Verdichterzustand in einen nicht laufenden Zustand auf 0 gesetzt.*/
+/*       | Dadurch bleibt nach Taktende keine veraltete Laufzeit stehen und */
+/*       | DashboardData.Cycles.CurrentDuration zeigt im Stillstand 0.      */
+/*       | Header-Abhängigkeit auf ProcessSignals 1.1.1 korrigiert.         */
+/* 1.1.2 | 2026-08-08                                                       */
+/*       | Betriebsart wird vor dem Zustandswechsel veröffentlicht. Dadurch */
+/*       | liest die EventEngine beim Ereignis VERDICHTER_GESTARTET bereits*/
+/*       | die zum Zyklusstart gültige Betriebsart (z. B. BRAUCHWASSER).    */
+/* 1.1.1 | 2026-07-30                                                       */
+/*       | Korrektur der Zyklusende-Erkennung: Der Übergang von AUSLAUF     */
+/*       | nach STILLSTAND wird nach Ablauf der Auslaufzeit allein durch    */
+/*       | den tatsächlich stehenden Verdichter ausgelöst. Ein weiterhin   */
+/*       | anliegender Bedarf verhindert das Zyklusende nicht mehr.         */
+/*       | Ein neuer Bedarf wird anschließend aus STILLSTAND regulär als    */
+/*       | STARTANFORDERUNG bzw. ANLAUF verarbeitet.                        */
+/* 1.1.0 | 2026-07-26                                                       */
+/*       | Abhängigkeit auf ProcessSignals 1.1.0 aktualisiert.              */
+/*       | Die StateMachine bleibt alleinige fachliche Quelle für           */
+/*       | StateMachine.Current.State und OperatingMode.                    */
+/*       | Rohwerte eines nicht verifizierten Verdichterstatusregisters     */
+/*       | werden nicht verwendet.                                          */
+/* 1.0.1 | 2026-07-20                                                       */
+/*       | Header auf NPS-CS-1.0 erweitert; Public API, Zustandsmodell,     */
+/*       | Trigger, Abhängigkeiten und Modulgrenzen dokumentiert.           */
+/*       | Abhängigkeit auf ProcessSignals 1.0.1 synchronisiert.            */
+/*       | Keine Änderung der Zustands- oder Übergangslogik.                */
+/* 1.0.0 | 2026-07-14                                                       */
+/*       | Produktive Erstversion.                                           */
+/*                                                                           */
+/* Korrektur 2026-08-18                                                     */
+/* - Public API nach Restore des persistenten StateMachine-Zustands sofort  */
+/*   initialisiert.                                                          */
+/*****************************************************************************/
 
 (function () {
     'use strict';
 
     const CONFIG = {
-        VERSION: '1.2.0',
+        VERSION: '1.2.1',
         REQUIRED_PROCESS_SIGNALS_VERSION: '1.1.1',
         DEBUG: false,
 
@@ -103,58 +112,26 @@
     };
 
     const INPUT = {
-        VERDICHTER_LAEUFT:
-            CONFIG.ROOT_SIGNALS + '.Verdichter.Laeuft',
-
-        VERDICHTER_STEHT:
-            CONFIG.ROOT_SIGNALS + '.Verdichter.Steht',
-
-        BEDARF_AKTIV:
-            CONFIG.ROOT_SIGNALS + '.Verdichter.BedarfAktiv',
-
-        ERWAERMER_AKTIV:
-            CONFIG.ROOT_SIGNALS + '.Verdichter.ErwaermerAktiv',
-
-        ABTAUUNG_AKTIV:
-            CONFIG.ROOT_SIGNALS + '.Verdichter.AbtauungAktiv',
-
-        PRIORITAET_STANDBY:
-            CONFIG.ROOT_SIGNALS + '.Betriebsart.Standby',
-
-        PRIORITAET_BRAUCHWASSER:
-            CONFIG.ROOT_SIGNALS + '.Betriebsart.Brauchwasser',
-
-        PRIORITAET_HEIZUNG:
-            CONFIG.ROOT_SIGNALS + '.Betriebsart.Heizung',
-
-        PRIORITAET_POOL:
-            CONFIG.ROOT_SIGNALS + '.Betriebsart.Pool',
-
-        PRIORITAET_KUEHLUNG:
-            CONFIG.ROOT_SIGNALS + '.Betriebsart.Kuehlung',
-
-        PRIORITAET_BEKANNT:
-            CONFIG.ROOT_SIGNALS + '.Betriebsart.Bekannt',
-
-        SIGNALE_GUELTIG:
-            CONFIG.ROOT_SIGNALS + '.Plausibilitaet.SignaleGueltig'
+        VERDICHTER_LAEUFT: CONFIG.ROOT_SIGNALS + '.Verdichter.Laeuft',
+        VERDICHTER_STEHT: CONFIG.ROOT_SIGNALS + '.Verdichter.Steht',
+        BEDARF_AKTIV: CONFIG.ROOT_SIGNALS + '.Verdichter.BedarfAktiv',
+        ERWAERMER_AKTIV: CONFIG.ROOT_SIGNALS + '.Verdichter.ErwaermerAktiv',
+        ABTAUUNG_AKTIV: CONFIG.ROOT_SIGNALS + '.Verdichter.AbtauungAktiv',
+        PRIORITAET_STANDBY: CONFIG.ROOT_SIGNALS + '.Betriebsart.Standby',
+        PRIORITAET_BRAUCHWASSER: CONFIG.ROOT_SIGNALS + '.Betriebsart.Brauchwasser',
+        PRIORITAET_HEIZUNG: CONFIG.ROOT_SIGNALS + '.Betriebsart.Heizung',
+        PRIORITAET_POOL: CONFIG.ROOT_SIGNALS + '.Betriebsart.Pool',
+        PRIORITAET_KUEHLUNG: CONFIG.ROOT_SIGNALS + '.Betriebsart.Kuehlung',
+        PRIORITAET_BEKANNT: CONFIG.ROOT_SIGNALS + '.Betriebsart.Bekannt',
+        SIGNALE_GUELTIG: CONFIG.ROOT_SIGNALS + '.Plausibilitaet.SignaleGueltig'
     };
 
     const OUTPUT = {
-        ZUSTAND:
-            CONFIG.ROOT + '.Current.State',
-
-        BETRIEBSART:
-            CONFIG.ROOT + '.Current.OperatingMode',
-
-        STARTZEIT:
-            CONFIG.ROOT + '.Current.StartTime',
-
-        STOPPZEIT:
-            CONFIG.ROOT + '.Current.StopTime',
-
-        LAUFZEIT:
-            CONFIG.ROOT + '.Current.Runtime'
+        ZUSTAND: CONFIG.ROOT + '.Current.State',
+        BETRIEBSART: CONFIG.ROOT + '.Current.OperatingMode',
+        STARTZEIT: CONFIG.ROOT + '.Current.StartTime',
+        STOPPZEIT: CONFIG.ROOT + '.Current.StopTime',
+        LAUFZEIT: CONFIG.ROOT + '.Current.Runtime'
     };
 
     const STATES = Object.freeze({
@@ -328,14 +305,7 @@
     }
 
     function ensureNumber(path, name, unit, role) {
-        ensureState(
-            path,
-            0,
-            'number',
-            role || 'value',
-            name,
-            unit
-        );
+        ensureState(path, 0, 'number', role || 'value', name, unit);
     }
 
     function createAllObjects() {
@@ -360,24 +330,9 @@
         ensureNumber('Current.Runtime', 'Laufzeit des aktuellen Verdichtertakts', 's', 'value.interval');
 
         ensureString('Memory.CurrentState', 'Aktueller gespeicherter Zustand');
-        ensureNumber(
-            'Memory.StateSinceMs',
-            'Zustand aktiv seit Unix-Zeit',
-            'ms',
-            'value.time'
-        );
-        ensureNumber(
-            'Memory.CycleStartMs',
-            'Aktueller Taktstart als Unix-Zeit',
-            'ms',
-            'value.time'
-        );
-        ensureNumber(
-            'Memory.CycleStopMs',
-            'Letzter Taktstopp als Unix-Zeit',
-            'ms',
-            'value.time'
-        );
+        ensureNumber('Memory.StateSinceMs', 'Zustand aktiv seit Unix-Zeit', 'ms', 'value.time');
+        ensureNumber('Memory.CycleStartMs', 'Aktueller Taktstart als Unix-Zeit', 'ms', 'value.time');
+        ensureNumber('Memory.CycleStopMs', 'Letzter Taktstopp als Unix-Zeit', 'ms', 'value.time');
 
         ensureString('Diagnostics.PreviousState', 'Vorheriger Zustand');
         ensureString('Diagnostics.LastTransition', 'Letzter Zustandswechsel');
@@ -433,22 +388,10 @@
     }
 
     function getOperatingState(signal) {
-        if (signal.prioritaetBrauchwasser === true) {
-            return STATES.BRAUCHWASSERBETRIEB;
-        }
-
-        if (signal.prioritaetHeizung === true) {
-            return STATES.HEIZBETRIEB;
-        }
-
-        if (signal.prioritaetPool === true) {
-            return STATES.POOLBETRIEB;
-        }
-
-        if (signal.prioritaetKuehlung === true) {
-            return STATES.KUEHLBETRIEB;
-        }
-
+        if (signal.prioritaetBrauchwasser === true) return STATES.BRAUCHWASSERBETRIEB;
+        if (signal.prioritaetHeizung === true) return STATES.HEIZBETRIEB;
+        if (signal.prioritaetPool === true) return STATES.POOLBETRIEB;
+        if (signal.prioritaetKuehlung === true) return STATES.KUEHLBETRIEB;
         return STATES.ANLAUF;
     }
 
@@ -467,20 +410,14 @@
             from: '*',
             to: STATES.STOERUNG,
             when: function (signal) {
-                return (
-                    !allRequiredSignalsReadable(signal) ||
-                    signal.signaleGueltig !== true
-                );
+                return !allRequiredSignalsReadable(signal) || signal.signaleGueltig !== true;
             }
         },
         {
             from: '*',
             to: STATES.ABTAUUNG,
             when: function (signal) {
-                return (
-                    signal.abtauungAktiv === true &&
-                    signal.verdichterLaeuft === true
-                );
+                return signal.abtauungAktiv === true && signal.verdichterLaeuft === true;
             }
         },
         {
@@ -494,10 +431,7 @@
             from: STATES.STILLSTAND,
             to: STATES.STARTANFORDERUNG,
             when: function (signal) {
-                return (
-                    signal.bedarfAktiv === true &&
-                    signal.verdichterSteht === true
-                );
+                return signal.bedarfAktiv === true && signal.verdichterSteht === true;
             }
         },
         {
@@ -518,11 +452,7 @@
             from: STATES.VORWAERMUNG,
             to: STATES.STILLSTAND,
             when: function (signal) {
-                return (
-                    signal.erwaermerAktiv === false &&
-                    signal.bedarfAktiv === false &&
-                    signal.verdichterSteht === true
-                );
+                return signal.erwaermerAktiv === false && signal.bedarfAktiv === false && signal.verdichterSteht === true;
             }
         },
         {
@@ -536,32 +466,21 @@
             from: STATES.STARTANFORDERUNG,
             to: STATES.VORWAERMUNG,
             when: function (signal) {
-                return (
-                    signal.bedarfAktiv === false &&
-                    signal.erwaermerAktiv === true
-                );
+                return signal.bedarfAktiv === false && signal.erwaermerAktiv === true;
             }
         },
         {
             from: STATES.STARTANFORDERUNG,
             to: STATES.STILLSTAND,
             when: function (signal) {
-                return (
-                    signal.bedarfAktiv === false &&
-                    signal.erwaermerAktiv === false &&
-                    signal.verdichterSteht === true
-                );
+                return signal.bedarfAktiv === false && signal.erwaermerAktiv === false && signal.verdichterSteht === true;
             }
         },
         {
             from: STATES.ANLAUF,
             to: 'BETRIEBSZUSTAND',
             when: function (signal, nowMs) {
-                return (
-                    signal.verdichterLaeuft === true &&
-                    secondsInCurrentState(nowMs) >=
-                        CONFIG.ANLAUF_DAUER_SEKUNDEN
-                );
+                return signal.verdichterLaeuft === true && secondsInCurrentState(nowMs) >= CONFIG.ANLAUF_DAUER_SEKUNDEN;
             }
         },
         {
@@ -575,40 +494,28 @@
             from: STATES.HEIZBETRIEB,
             to: 'BETRIEBSZUSTAND',
             when: function (signal) {
-                return (
-                    signal.verdichterLaeuft === true &&
-                    signal.prioritaetHeizung !== true
-                );
+                return signal.verdichterLaeuft === true && signal.prioritaetHeizung !== true;
             }
         },
         {
             from: STATES.BRAUCHWASSERBETRIEB,
             to: 'BETRIEBSZUSTAND',
             when: function (signal) {
-                return (
-                    signal.verdichterLaeuft === true &&
-                    signal.prioritaetBrauchwasser !== true
-                );
+                return signal.verdichterLaeuft === true && signal.prioritaetBrauchwasser !== true;
             }
         },
         {
             from: STATES.POOLBETRIEB,
             to: 'BETRIEBSZUSTAND',
             when: function (signal) {
-                return (
-                    signal.verdichterLaeuft === true &&
-                    signal.prioritaetPool !== true
-                );
+                return signal.verdichterLaeuft === true && signal.prioritaetPool !== true;
             }
         },
         {
             from: STATES.KUEHLBETRIEB,
             to: 'BETRIEBSZUSTAND',
             when: function (signal) {
-                return (
-                    signal.verdichterLaeuft === true &&
-                    signal.prioritaetKuehlung !== true
-                );
+                return signal.verdichterLaeuft === true && signal.prioritaetKuehlung !== true;
             }
         },
         {
@@ -643,52 +550,28 @@
             from: STATES.ABTAUUNG,
             to: 'BETRIEBSZUSTAND',
             when: function (signal) {
-                return (
-                    signal.abtauungAktiv === false &&
-                    signal.verdichterLaeuft === true
-                );
+                return signal.abtauungAktiv === false && signal.verdichterLaeuft === true;
             }
         },
         {
             from: STATES.ABTAUUNG,
             to: STATES.AUSLAUF,
             when: function (signal) {
-                return (
-                    signal.abtauungAktiv === false &&
-                    signal.verdichterSteht === true
-                );
+                return signal.abtauungAktiv === false && signal.verdichterSteht === true;
             }
         },
         {
             from: STATES.AUSLAUF,
             to: STATES.STILLSTAND,
             when: function (signal, nowMs) {
-                /*
-                 * Das physische Zyklusende ist erreicht, sobald der
-                 * Verdichter tatsächlich steht und die definierte
-                 * Auslaufzeit abgelaufen ist.
-                 *
-                 * Ein weiterhin anliegender Bedarf darf diesen Übergang
-                 * nicht blockieren. Andernfalls würden weder ein sauberer
-                 * Taktabschluss noch das Ereignis VERDICHTER_GESTOPPT
-                 * entstehen. Ein neuer Bedarf wird in der folgenden
-                 * Auswertung aus STILLSTAND weiterverarbeitet.
-                 */
-                return (
-                    signal.verdichterSteht === true &&
-                    secondsInCurrentState(nowMs) >=
-                        CONFIG.AUSLAUF_DAUER_SEKUNDEN
-                );
+                return signal.verdichterSteht === true && secondsInCurrentState(nowMs) >= CONFIG.AUSLAUF_DAUER_SEKUNDEN;
             }
         },
         {
             from: STATES.AUSLAUF,
             to: STATES.STARTANFORDERUNG,
             when: function (signal) {
-                return (
-                    signal.verdichterSteht === true &&
-                    signal.bedarfAktiv === true
-                );
+                return signal.verdichterSteht === true && signal.bedarfAktiv === true;
             }
         },
         {
@@ -702,56 +585,23 @@
             from: STATES.STOERUNG,
             to: 'INITIAL',
             when: function (signal) {
-                return (
-                    allRequiredSignalsReadable(signal) &&
-                    signal.signaleGueltig === true
-                );
+                return allRequiredSignalsReadable(signal) && signal.signaleGueltig === true;
             }
         }
     ];
 
     function resolveTarget(target, signal) {
-        if (target === 'BETRIEBSZUSTAND') {
-            return getOperatingState(signal);
-        }
-
-        if (target === 'INITIAL') {
-            return determineInitialState(signal);
-        }
-
+        if (target === 'BETRIEBSZUSTAND') return getOperatingState(signal);
+        if (target === 'INITIAL') return determineInitialState(signal);
         return target;
     }
 
     function determineInitialState(signal) {
-        if (
-            !allRequiredSignalsReadable(signal) ||
-            signal.signaleGueltig !== true
-        ) {
-            return STATES.STOERUNG;
-        }
-
-        if (
-            signal.abtauungAktiv === true &&
-            signal.verdichterLaeuft === true
-        ) {
-            return STATES.ABTAUUNG;
-        }
-
-        if (signal.verdichterLaeuft === true) {
-            return getOperatingState(signal);
-        }
-
-        if (
-            signal.bedarfAktiv === true &&
-            signal.verdichterSteht === true
-        ) {
-            return STATES.STARTANFORDERUNG;
-        }
-
-        if (signal.erwaermerAktiv === true) {
-            return STATES.VORWAERMUNG;
-        }
-
+        if (!allRequiredSignalsReadable(signal) || signal.signaleGueltig !== true) return STATES.STOERUNG;
+        if (signal.abtauungAktiv === true && signal.verdichterLaeuft === true) return STATES.ABTAUUNG;
+        if (signal.verdichterLaeuft === true) return getOperatingState(signal);
+        if (signal.bedarfAktiv === true && signal.verdichterSteht === true) return STATES.STARTANFORDERUNG;
+        if (signal.erwaermerAktiv === true) return STATES.VORWAERMUNG;
         return STATES.STILLSTAND;
     }
 
@@ -759,12 +609,7 @@
         for (let index = 0; index < TRANSITIONS.length; index++) {
             const transition = TRANSITIONS[index];
 
-            if (
-                transition.from !== '*' &&
-                transition.from !== memory.currentState
-            ) {
-                continue;
-            }
+            if (transition.from !== '*' && transition.from !== memory.currentState) continue;
 
             if (transition.when(signal, nowMs)) {
                 return resolveTarget(transition.to, signal);
@@ -788,59 +633,18 @@
             memory.currentState = storedState.val;
         }
 
-        memory.stateSinceMs =
-            storedStateSinceMs && storedStateSinceMs > 0
-                ? storedStateSinceMs
-                : null;
-
-        memory.cycleStartMs =
-            storedCycleStartMs && storedCycleStartMs > 0
-                ? storedCycleStartMs
-                : null;
-
-        memory.cycleStopMs =
-            storedCycleStopMs && storedCycleStopMs > 0
-                ? storedCycleStopMs
-                : null;
+        memory.stateSinceMs = storedStateSinceMs && storedStateSinceMs > 0 ? storedStateSinceMs : null;
+        memory.cycleStartMs = storedCycleStartMs && storedCycleStartMs > 0 ? storedCycleStartMs : null;
+        memory.cycleStopMs = storedCycleStopMs && storedCycleStopMs > 0 ? storedCycleStopMs : null;
     }
 
     function publishRestoredCurrent(nowMs) {
-        /*
-         * Nach einem Script-Neustart wird der persistierte Zustand aus
-         * Memory.* wiederhergestellt. Da changeState() bei unverändertem
-         * Zustand bewusst nichts schreibt, muss die Public API hier einmal
-         * explizit initialisiert werden.
-         */
-        writeId(
-            OUTPUT.ZUSTAND,
-            memory.currentState || ''
-        );
+        writeId(OUTPUT.ZUSTAND, memory.currentState || '');
+        writeId(OUTPUT.STARTZEIT, memory.cycleStartMs !== null ? formatDateTime(memory.cycleStartMs) : '');
+        writeId(OUTPUT.STOPPZEIT, memory.cycleStopMs !== null ? formatDateTime(memory.cycleStopMs) : '');
 
-        writeId(
-            OUTPUT.STARTZEIT,
-            memory.cycleStartMs !== null
-                ? formatDateTime(memory.cycleStartMs)
-                : ''
-        );
-
-        writeId(
-            OUTPUT.STOPPZEIT,
-            memory.cycleStopMs !== null
-                ? formatDateTime(memory.cycleStopMs)
-                : ''
-        );
-
-        if (
-            memory.cycleStartMs !== null &&
-            isRunningState(memory.currentState)
-        ) {
-            writeId(
-                OUTPUT.LAUFZEIT,
-                Math.max(
-                    0,
-                    Math.floor((nowMs - memory.cycleStartMs) / 1000)
-                )
-            );
+        if (memory.cycleStartMs !== null && isRunningState(memory.currentState)) {
+            writeId(OUTPUT.LAUFZEIT, Math.max(0, Math.floor((nowMs - memory.cycleStartMs) / 1000)));
         } else {
             writeId(OUTPUT.LAUFZEIT, 0);
         }
@@ -855,18 +659,13 @@
 
     function incrementTransitionCount() {
         const current = readNumber(dp('Diagnostics.TransitionCount'));
-        write(
-            'Diagnostics.TransitionCount',
-            (current === null ? 0 : current) + 1
-        );
+        write('Diagnostics.TransitionCount', (current === null ? 0 : current) + 1);
     }
 
     function changeState(nextState, nowMs) {
         const previousState = memory.currentState;
 
-        if (previousState === nextState) {
-            return;
-        }
+        if (previousState === nextState) return;
 
         const wasRunning = isRunningState(previousState);
         const isRunning = isRunningState(nextState);
@@ -885,6 +684,15 @@
         if (wasRunning && !isRunning) {
             memory.cycleStopMs = nowMs;
             writeId(OUTPUT.STOPPZEIT, formatDateTime(nowMs));
+
+            /*
+             * v1.2.1: Current.Runtime beschreibt ausschließlich die Laufzeit
+             * des AKTUELLEN Verdichtertakts. Beim Verlassen eines laufenden
+             * Zustands ist deshalb sofort 0 zu veröffentlichen. Die Dauer des
+             * abgeschlossenen Takts wird von CycleRecorder/CycleAnalyzer
+             * bereitgestellt und darf hier nicht als Restwert stehen bleiben.
+             */
+            writeId(OUTPUT.LAUFZEIT, 0);
         }
 
         writeId(OUTPUT.ZUSTAND, nextState);
@@ -900,23 +708,12 @@
         incrementTransitionCount();
         persistMemory();
 
-        debug(
-            'Zustandswechsel: ' +
-            (previousState || 'NICHT_INITIALISIERT') +
-            ' -> ' +
-            nextState
-        );
+        debug('Zustandswechsel: ' + (previousState || 'NICHT_INITIALISIERT') + ' -> ' + nextState);
     }
 
     function updateRuntime(nowMs) {
-        if (
-            memory.cycleStartMs !== null &&
-            isRunningState(memory.currentState)
-        ) {
-            writeId(
-                OUTPUT.LAUFZEIT,
-                Math.floor((nowMs - memory.cycleStartMs) / 1000)
-            );
+        if (memory.cycleStartMs !== null && isRunningState(memory.currentState)) {
+            writeId(OUTPUT.LAUFZEIT, Math.floor((nowMs - memory.cycleStartMs) / 1000));
         }
     }
 
@@ -942,26 +739,15 @@
 
         write('Diagnostics.SignalsReadable', readable);
 
-        /*
-         * Betriebsart vor dem Zustandswechsel veröffentlichen.
-         * Die EventEngine reagiert unmittelbar auf OUTPUT.ZUSTAND.
-         * Dadurch steht ihr beim Ereignis bereits die aktuelle
-         * Betriebsart des neuen Zyklus zur Verfügung.
-         */
         const operatingMode = getOperatingMode(signal);
         writeId(OUTPUT.BETRIEBSART, operatingMode);
 
         if (memory.currentState === null) {
-            changeState(
-                determineInitialState(signal),
-                nowMs
-            );
+            changeState(determineInitialState(signal), nowMs);
         } else {
-            changeState(
-                findNextState(signal, nowMs),
-                nowMs
-            );
+            changeState(findNextState(signal, nowMs), nowMs);
         }
+
         updateRuntime(nowMs);
         persistMemory();
 
@@ -969,50 +755,28 @@
 
         if (memory.currentState === STATES.STOERUNG) {
             write('System.Status', 'STÖRUNG');
-            write(
-                'System.LastMessage',
-                'Prozesssignale sind ungültig oder widersprüchlich'
-            );
-            write(
-                'Diagnostics.Warning',
-                'Zustandsmaschine befindet sich im Zustand STÖRUNG'
-            );
+            write('System.LastMessage', 'Prozesssignale sind ungültig oder widersprüchlich');
+            write('Diagnostics.Warning', 'Zustandsmaschine befindet sich im Zustand STÖRUNG');
         } else {
             write('System.Status', 'BEREIT');
-            write(
-                'System.LastMessage',
-                'Zustand ' +
-                memory.currentState +
-                ', Betriebsart ' +
-                operatingMode
-            );
+            write('System.LastMessage', 'Zustand ' + memory.currentState + ', Betriebsart ' + operatingMode);
             write('Diagnostics.Warning', '');
         }
 
         writeTrace(signal, operatingMode);
     }
 
-
     function validateDependencies() {
-        const processSignalsVersionId =
-            CONFIG.ROOT_SIGNALS + '.System.Version';
+        const processSignalsVersionId = CONFIG.ROOT_SIGNALS + '.System.Version';
 
         if (!existsState(processSignalsVersionId)) {
-            warn(
-                'Start abgebrochen. 06_NPS_ProcessSignals v' +
-                CONFIG.REQUIRED_PROCESS_SIGNALS_VERSION +
-                ' fehlt.'
-            );
+            warn('Start abgebrochen. 06_NPS_ProcessSignals v' + CONFIG.REQUIRED_PROCESS_SIGNALS_VERSION + ' fehlt.');
             return false;
         }
 
-        const processSignalsVersion =
-            String(getState(processSignalsVersionId).val || '');
+        const processSignalsVersion = String(getState(processSignalsVersionId).val || '');
 
-        if (
-            processSignalsVersion !==
-            CONFIG.REQUIRED_PROCESS_SIGNALS_VERSION
-        ) {
+        if (processSignalsVersion !== CONFIG.REQUIRED_PROCESS_SIGNALS_VERSION) {
             warn(
                 'ProcessSignals-Version ist ' +
                 processSignalsVersion +
@@ -1040,13 +804,7 @@
 
     function registerTriggers() {
         Object.keys(INPUT).forEach(function (key) {
-            on(
-                {
-                    id: INPUT[key],
-                    change: 'ne'
-                },
-                evaluate
-            );
+            on({ id: INPUT[key], change: 'ne' }, evaluate);
         });
     }
 
@@ -1072,9 +830,7 @@
             registerTriggers();
 
             scheduleHandle = schedule(
-                '*/' +
-                CONFIG.AKTUALISIERUNG_SEKUNDEN +
-                ' * * * * *',
+                '*/' + CONFIG.AKTUALISIERUNG_SEKUNDEN + ' * * * * *',
                 evaluate
             );
 
