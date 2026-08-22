@@ -3,8 +3,8 @@
  * -----------------------------------------------------------------------------
  * Modul:               09_NPS_NotificationBridge
  * Datei:               09_NPS_NotificationBridge.js
- * Version:             1.2.2
- * Build:               2026-08-18
+ * Version:             1.2.3
+ * Build:               2026-08-22
  * Modulstatus:         STABIL / BEOBACHTEN
  * Architektur-Schicht: Integrationsschicht / Benachrichtigungs-Bridge
  * Coding Standard:     NPS-CS-1.0
@@ -49,7 +49,7 @@
  *
  * Abhängigkeiten
  * ---------------
- * - 08_NPS_EventEngine.js, exakt Version 1.2.0
+ * - 08_NPS_EventEngine.js, exakt Version 1.2.1
  * - 00_NotificationCenter.js, Version 1.0.0 oder neuer
  * - ioBroker JavaScript-Adapter
  *
@@ -63,6 +63,9 @@
  *
  * Änderungsverlauf
  * ----------------
+ * 1.2.3 | 2026-08-22
+ *       | Abhängigkeit auf 08_NPS_EventEngine v1.2.1 aktualisiert.
+ *       | Keine Änderung der Routing-, Publikations- oder Benachrichtigungslogik.
  * 1.2.1 | 2026-07-29
  *       | Korrektur: JARVIS-Benachrichtigungen bleiben aktiviert.
  *       | Matrix-Versand bleibt ausschließlich auf matrix-org.0 begrenzt.
@@ -93,8 +96,8 @@
     'use strict';
 
     const CONFIG = {
-        VERSION: '1.2.2',
-        REQUIRED_EVENT_ENGINE_VERSION: '1.2.0',
+        VERSION: '1.2.3',
+        REQUIRED_EVENT_ENGINE_VERSION: '1.2.1',
         DEBUG: false,
 
         NPS_ROOT: '0_userdata.0.NPS',

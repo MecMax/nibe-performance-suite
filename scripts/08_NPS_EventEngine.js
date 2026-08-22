@@ -3,8 +3,8 @@
  * -----------------------------------------------------------------------------
  * Modul:               08_NPS_EventEngine
  * Datei:               08_NPS_EventEngine.js
- * Version:             1.2.0
- * Build:               2026-08-18
+ * Version:             1.2.1
+ * Build:               2026-08-22
  * Modulstatus:         STABIL
  * Architektur-Schicht: Ereignismodell / Event-Publishing
  * Coding Standard:     NPS-CS-1.0
@@ -51,7 +51,7 @@
  *
  * Abhängigkeiten
  * ---------------
- * - 07_NPS_StateMachine.js, exakt Version 1.2.0
+ * - 07_NPS_StateMachine.js, exakt Version 1.2.1
  * - ioBroker JavaScript-Adapter
  *
  * Architekturregeln
@@ -64,6 +64,9 @@
  *
  * Änderungsverlauf
  * ----------------
+ * 1.2.1 | 2026-08-22
+ *       | Abhängigkeit auf 07_NPS_StateMachine v1.2.1 aktualisiert.
+ *       | Keine Änderung der Ereignislogik oder Public API.
  * 1.1.2 | 2026-08-08
  *       | Robuste Zustandsauswertung ergänzt.
  *       | Numerische/ungültige Zwischenwerte der StateMachine-Public-API
@@ -95,8 +98,8 @@
     'use strict';
 
     const CONFIG = {
-        VERSION: '1.2.0',
-        REQUIRED_STATE_MACHINE_VERSION: '1.2.0',
+        VERSION: '1.2.1',
+        REQUIRED_STATE_MACHINE_VERSION: '1.2.1',
         DEBUG: false,
 
         ROOT_STATE_MACHINE: '0_userdata.0.NPS.StateMachine',
