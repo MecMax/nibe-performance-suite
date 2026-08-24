@@ -8,6 +8,8 @@ The project follows semantic versioning principles for repository releases.
 
 ### Added
 
+- Added `15_NPS_HeatingCurveAnalyzer` v0.1.1 for NPS 1.1 heating optimization data acquisition and analysis, including 13-room evaluation, 5-minute sampling, 7-day buffering, SourceCheck/DataQuality, evidence generation and standardized `AI.AnalysisPayload`.
+- Added complete user, technical and persistence specifications for `15_NPS_HeatingCurveAnalyzer` v0.1.1.
 - Added the complete InfluxDB V1 history matrix for `influxdb.0` and `influxdb.1`, including CycleAnalyzer logging and duplicate-cleanup rules.
 - Added GitHub-readable operator documentation generated from DashboardData `HELP_DOCUMENTATION` (1 general + 8 module-specific chapters), complete HTML manual and JSON source snapshot.
 - Extended the alias reference with concrete ioBroker Modbus object, register index and Modbus address from the supplied alias export.

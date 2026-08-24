@@ -103,6 +103,13 @@
       "sha256": "e385193d61ca329f018b84fc803cc86a64bf19574f47a7e6a7edb2b55c0e49fb"
     },
     {
+       "file": "scripts/15_NPS_HeatingCurveAnalyzer.js",
+       "source_export": "NPS_-_15_NPS_HeatingCurveAnalyzer.json",
+       "enabled_in_export": true,
+       "version": "0.1.1",
+       "sha256": "01b5363cab38ec49bb786f2ea47198b9d04c42704b0c35ecc3146ed7afed3234"
+},
+    {
       "file": "scripts/98_NPS_CycleRecorder.js",
       "source_export": "NPS_-_98_NPS_CycleRecorder.json",
       "enabled_in_export": true,
