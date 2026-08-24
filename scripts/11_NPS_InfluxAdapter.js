@@ -3,8 +3,8 @@
  * -----------------------------------------------------------------------------
  * Modul:               11_NPS_InfluxAdapter
  * Datei:               11_NPS_InfluxAdapter.js
- * Version:             1.0.4
- * Build:               2026-08-22
+ * Version:             1.1.0-rc.1
+ * Build:               2026-08-23
  * Modulstatus:         STABIL
  * Architektur-Schicht: Persistenzzugriff / Historienadapter
  * Coding Standard:     NPS-CS-1.0
@@ -17,6 +17,15 @@
  * dem PerformanceAnalyzer als normierte, typisierte JSON-Arrays bereit. Die
  * Historie wird nicht aus Einzelmesswerten rekonstruiert, sondern aus den vom
  * CycleAnalyzer publizierten vollständigen CycleReport-Dokumenten geladen.
+ *
+ * Zusätzlich verwaltet das Modul ab 1.1.0-rc.1 die für Jarvis-HistoryGraphs
+ * vorgesehenen DashboardData-Historienzuordnungen in einem konservativen
+ * SAFE_ADD_ONLY-Verfahren:
+ * - bestehende aktive Historien werden niemals verändert,
+ * - bei aktiver Historie auf der jeweils anderen InfluxDB-Instanz wird nichts
+ *   automatisch hinzugefügt,
+ * - Doppelaktivierungen werden erkannt und nur diagnostiziert,
+ * - fehlende Historien können explizit über Command.ApplyHistoryConfig ergänzt werden.
  *
  * Elektrische Energie, thermische Energie, Leistung und COP werden weder
  * gelesen noch neu berechnet. Diese Werte sind bereits Bestandteil der
@@ -66,6 +75,16 @@
  *
  * Änderungsverlauf
  * ----------------
+ * 1.1.0-rc.1 | 2026-08-23
+ *            | Sichere Verwaltung der Jarvis-HistoryGraph-Persistenz ergänzt.
+ *            | 28 DashboardData-Datenpunkte werden einer Zielinstanz und einem
+ *            | History-Profil zugeordnet.
+ *            | SAFE_ADD_ONLY: aktive bestehende History-Konfigurationen werden
+ *            | nicht verändert; bei aktiver anderer Influx-Instanz wird nichts
+ *            | automatisch zugeschaltet.
+ *            | Doppelhistorien influxdb.0/influxdb.1 werden erkannt und gemeldet.
+ *            | Neue Befehle: AuditHistoryConfig und ApplyHistoryConfig.
+ *            | CycleReportJson/influxdb.1 bleibt unverändert geschützt.
  * 1.0.4 | 2026-08-22
  *       | Architekturtrennung influxdb.0 / influxdb.1 ausdrücklich dokumentiert.
  *       | influxdb.1 bleibt die Standardinstanz für die persistierten
@@ -94,7 +113,7 @@
 
 const MODULE = Object.freeze({
     NAME: 'NPS InfluxAdapter',
-    VERSION: '1.0.4',
+    VERSION: '1.1.0-rc.1',
     ROOT: '0_userdata.0.NPS.InfluxAdapter'
 });
 
@@ -112,6 +131,124 @@ const DEFAULTS = Object.freeze({
     INCLUDE_INVALID_CYCLES: false,
     DEBUG: false
 });
+
+
+/*
+ * Jarvis HistoryGraph Persistenz
+ * ------------------------------
+ * Ziel:
+ * - genau eine InfluxDB-Instanz je verwaltetem DashboardData-Datenpunkt,
+ * - bestehende aktive Historien niemals automatisch verändern,
+ * - keine automatische Migration zwischen influxdb.0 und influxdb.1,
+ * - fehlende Historien nur nach explizitem Apply-Befehl ergänzen.
+ *
+ * Profile:
+ * A = abgeschlossene Tages-/Langzeitwerte, influxdb.0
+ * B = kontinuierliche Mess-/Sollwerte, influxdb.1, Relog alle 300 s
+ * C = dynamische Betriebswerte, influxdb.1, Blockzeit 60 s
+ * D = Ereignis-/Zykluswerte, influxdb.1, keine Blockzeit
+ */
+const HISTORY_POLICY = Object.freeze({
+    MODE: 'SAFE_ADD_ONLY',
+    LONGTERM_INSTANCE: 'influxdb.0',
+    LIVE_INSTANCE: 'influxdb.1',
+    APPLY_ON_STARTUP: false
+});
+
+function historySettings(profile) {
+    const base = {
+        enabled: true,
+        storageType: '',
+        aliasId: '',
+        debounceTime: 0,
+        debounce: 0,
+        blockTime: 0,
+        changesOnly: true,
+        changesRelogInterval: 0,
+        changesMinDelta: 0,
+        ignoreBelowNumber: '',
+        disableSkippedValueLogging: false,
+        enableDebugLogs: false
+    };
+
+    if (profile === 'B') {
+        // Lang konstant bleibende Linien (z. B. Vorlauf Soll) sicher sichtbar halten.
+        return Object.freeze({ ...base, changesRelogInterval: 300 });
+    }
+
+    if (profile === 'C') {
+        // Dynamische Messwerte begrenzen, ohne fünf Minuten Auflösung zu verlieren.
+        return Object.freeze({ ...base, blockTime: 60000 });
+    }
+
+    return Object.freeze(base);
+}
+
+const HISTORY_PROFILES = Object.freeze({
+    A: historySettings('A'),
+    B: historySettings('B'),
+    C: historySettings('C'),
+    D: historySettings('D')
+});
+
+function historyItem(path, instance, profile) {
+    return Object.freeze({
+        id: `0_userdata.0.NPS.DashboardData.${path}`,
+        instance,
+        profile
+    });
+}
+
+const HISTORY_TARGETS = Object.freeze([
+    // Profil A – Tages-/Langzeitwerte -> influxdb.0
+    historyItem('Statistics.AnteilVerdichter.Yesterday', HISTORY_POLICY.LONGTERM_INSTANCE, 'A'),
+    historyItem('Statistics.AnteilZusatzheizung.Yesterday', HISTORY_POLICY.LONGTERM_INSTANCE, 'A'),
+    historyItem('Statistics.COPGesamt.Yesterday', HISTORY_POLICY.LONGTERM_INSTANCE, 'A'),
+    historyItem('Statistics.COPHeizung.Yesterday', HISTORY_POLICY.LONGTERM_INSTANCE, 'A'),
+    historyItem('Statistics.COPWarmwasser.Yesterday', HISTORY_POLICY.LONGTERM_INSTANCE, 'A'),
+
+    historyItem('Energy.History.ElectricTotalPerDay', HISTORY_POLICY.LONGTERM_INSTANCE, 'A'),
+    historyItem('Energy.History.ElectricHeatingPerDay', HISTORY_POLICY.LONGTERM_INSTANCE, 'A'),
+    historyItem('Energy.History.ElectricWarmwaterPerDay', HISTORY_POLICY.LONGTERM_INSTANCE, 'A'),
+    historyItem('Energy.History.ElectricZHPerDay', HISTORY_POLICY.LONGTERM_INSTANCE, 'A'),
+    historyItem('Energy.History.HeatTotalPerDay', HISTORY_POLICY.LONGTERM_INSTANCE, 'A'),
+    historyItem('Energy.History.HeatHeatingPerDay', HISTORY_POLICY.LONGTERM_INSTANCE, 'A'),
+    historyItem('Energy.History.HeatWarmwaterPerDay', HISTORY_POLICY.LONGTERM_INSTANCE, 'A'),
+    historyItem('Energy.History.HeatZHPerDay', HISTORY_POLICY.LONGTERM_INSTANCE, 'A'),
+
+    historyItem('Compressor.History.StartsPerDay', HISTORY_POLICY.LONGTERM_INSTANCE, 'A'),
+    historyItem('Compressor.History.RuntimePerDay', HISTORY_POLICY.LONGTERM_INSTANCE, 'A'),
+
+    // Profil B – kontinuierliche Mess-/Sollwerte -> influxdb.1
+    // Änderungen sofort; bei unverändertem Wert spätestens alle 300 s erneut speichern.
+    historyItem('Temperatures.Outdoor', HISTORY_POLICY.LIVE_INSTANCE, 'B'),
+    historyItem('Temperatures.SupplyTarget', HISTORY_POLICY.LIVE_INSTANCE, 'B'),
+    historyItem('Temperatures.Supply', HISTORY_POLICY.LIVE_INSTANCE, 'B'),
+    historyItem('Temperatures.Return', HISTORY_POLICY.LIVE_INSTANCE, 'B'),
+    historyItem('Temperatures.Warmwater', HISTORY_POLICY.LIVE_INSTANCE, 'B'),
+    historyItem('Temperatures.WarmwaterCharging', HISTORY_POLICY.LIVE_INSTANCE, 'B'),
+
+    // Profil C – dynamische Betriebswerte -> influxdb.1
+    historyItem('Temperatures.DeltaT', HISTORY_POLICY.LIVE_INSTANCE, 'C'),
+    historyItem('Temperatures.Flow', HISTORY_POLICY.LIVE_INSTANCE, 'C'),
+    historyItem('Compressor.Frequency', HISTORY_POLICY.LIVE_INSTANCE, 'C'),
+
+    // Profil D – Ereignis-/Zykluswerte -> influxdb.1
+    historyItem('Defrost.Active', HISTORY_POLICY.LIVE_INSTANCE, 'D'),
+    historyItem('Cycles.COP', HISTORY_POLICY.LIVE_INSTANCE, 'D'),
+    historyItem('Cycles.Duration', HISTORY_POLICY.LIVE_INSTANCE, 'D'),
+    historyItem('Cycles.Quality', HISTORY_POLICY.LIVE_INSTANCE, 'D')
+]);
+
+// Diese Quelle ist für den vorhandenen InfluxAdapter fachlich fest an influxdb.1 gebunden.
+// Sie wird ausschließlich geprüft, niemals durch die neue History-Verwaltung verändert.
+const HISTORY_PROTECTED = Object.freeze([
+    Object.freeze({
+        id: SOURCE.CYCLE_REPORT,
+        expectedInstance: HISTORY_POLICY.LIVE_INSTANCE,
+        reason: 'CycleReport-Quelle des InfluxAdapters'
+    })
+]);
 
 const TYPE_CODES = Object.freeze({
     HEIZUNG: 1,
@@ -215,6 +352,47 @@ async function createStructure() {
     await ensureChannel(id('Command'), 'Befehle');
     await ensureState(id('Command.Refresh'), false, {
         name: 'Historie neu laden', type: 'boolean', role: 'button', write: true
+    });
+    await ensureState(id('Command.AuditHistoryConfig'), false, {
+        name: 'History-Konfiguration prüfen', type: 'boolean', role: 'button', write: true
+    });
+    await ensureState(id('Command.ApplyHistoryConfig'), false, {
+        name: 'Fehlende History-Konfiguration ergänzen', type: 'boolean', role: 'button', write: true
+    });
+
+    await ensureChannel(id('HistoryConfig'), 'Jarvis-HistoryGraph-Konfiguration');
+    await ensureState(id('HistoryConfig.Mode'), HISTORY_POLICY.MODE, {
+        name: 'History-Verwaltungsmodus', type: 'string', role: 'text'
+    });
+    await ensureState(id('HistoryConfig.ManagedCount'), HISTORY_TARGETS.length, {
+        name: 'Verwaltete Datenpunkte', type: 'number', role: 'value'
+    });
+    await ensureState(id('HistoryConfig.PreservedCount'), 0, {
+        name: 'Bestehende aktive Historien unverändert', type: 'number', role: 'value'
+    });
+    await ensureState(id('HistoryConfig.MissingCount'), 0, {
+        name: 'Fehlende History-Konfigurationen', type: 'number', role: 'value'
+    });
+    await ensureState(id('HistoryConfig.ConflictCount'), 0, {
+        name: 'Konflikte mit anderer Influx-Instanz', type: 'number', role: 'value'
+    });
+    await ensureState(id('HistoryConfig.DuplicateCount'), 0, {
+        name: 'Doppelhistorien influxdb.0/influxdb.1', type: 'number', role: 'value'
+    });
+    await ensureState(id('HistoryConfig.MissingObjectCount'), 0, {
+        name: 'Fehlende Datenpunktobjekte', type: 'number', role: 'value'
+    });
+    await ensureState(id('HistoryConfig.AppliedCount'), 0, {
+        name: 'Neu ergänzte History-Konfigurationen', type: 'number', role: 'value'
+    });
+    await ensureState(id('HistoryConfig.LastAudit'), '', {
+        name: 'Letzte History-Prüfung', type: 'string', role: 'date'
+    });
+    await ensureState(id('HistoryConfig.Status'), 'UNGEPRÜFT', {
+        name: 'History-Konfigurationsstatus', type: 'string', role: 'text'
+    });
+    await ensureState(id('HistoryConfig.ReportJson'), '[]', {
+        name: 'History-Konfigurationsreport', type: 'string', role: 'json'
     });
 
     await ensureChannel(id('History'), 'Historische Zyklen');
@@ -328,6 +506,251 @@ function readConfig() {
 
 function logDebug(message) {
     if (readConfig().debug) log(`[${MODULE.NAME}] ${message}`, 'info');
+}
+
+
+function isHistoryEnabled(custom, instance) {
+    return !!(
+        custom &&
+        custom[instance] &&
+        custom[instance].enabled === true
+    );
+}
+
+function otherInfluxInstance(instance) {
+    return instance === HISTORY_POLICY.LONGTERM_INSTANCE
+        ? HISTORY_POLICY.LIVE_INSTANCE
+        : HISTORY_POLICY.LONGTERM_INSTANCE;
+}
+
+function relevantHistorySettings(settings) {
+    if (!settings || typeof settings !== 'object') return {};
+    return {
+        enabled: settings.enabled === true,
+        changesOnly: settings.changesOnly === true,
+        debounceTime: Number(settings.debounceTime || settings.debounce || 0),
+        blockTime: Number(settings.blockTime || 0),
+        changesRelogInterval: Number(settings.changesRelogInterval || 0),
+        changesMinDelta: Number(settings.changesMinDelta || 0),
+        ignoreBelowNumber: settings.ignoreBelowNumber === undefined ? '' : settings.ignoreBelowNumber,
+        disableSkippedValueLogging: settings.disableSkippedValueLogging === true,
+        storageType: settings.storageType || '',
+        aliasId: settings.aliasId || ''
+    };
+}
+
+function differsFromProfile(existing, desired) {
+    const actual = relevantHistorySettings(existing);
+    const expected = relevantHistorySettings(desired);
+    return Object.keys(expected).some(key => actual[key] !== expected[key]);
+}
+
+function extendObjectPromise(path, extension) {
+    return new Promise((resolve, reject) => {
+        extendObject(path, extension, error => {
+            if (error) reject(error);
+            else resolve();
+        });
+    });
+}
+
+async function auditHistoryConfig(applyMissing) {
+    const report = [];
+    let preservedCount = 0;
+    let missingCount = 0;
+    let conflictCount = 0;
+    let duplicateCount = 0;
+    let missingObjectCount = 0;
+    let appliedCount = 0;
+
+    for (const target of HISTORY_TARGETS) {
+        const obj = getObject(target.id);
+        if (!obj || obj.type !== 'state') {
+            missingObjectCount++;
+            report.push({
+                id: target.id,
+                target: target.instance,
+                profile: target.profile,
+                status: 'OBJECT_MISSING',
+                changed: false
+            });
+            continue;
+        }
+
+        const custom = obj.common && obj.common.custom ? obj.common.custom : {};
+        const targetEnabled = isHistoryEnabled(custom, target.instance);
+        const otherInstance = otherInfluxInstance(target.instance);
+        const otherEnabled = isHistoryEnabled(custom, otherInstance);
+
+        if (targetEnabled && otherEnabled) {
+            duplicateCount++;
+            conflictCount++;
+            report.push({
+                id: target.id,
+                target: target.instance,
+                profile: target.profile,
+                status: 'DUPLICATE_ACTIVE',
+                changed: false,
+                note: `${target.instance} und ${otherInstance} sind aktiv; SAFE_ADD_ONLY verändert nichts.`
+            });
+            continue;
+        }
+
+        if (targetEnabled) {
+            preservedCount++;
+            const differs = differsFromProfile(custom[target.instance], HISTORY_PROFILES[target.profile]);
+            report.push({
+                id: target.id,
+                target: target.instance,
+                profile: target.profile,
+                status: differs ? 'PRESERVED_ACTIVE_DIFFERENT_SETTINGS' : 'PRESERVED_ACTIVE',
+                changed: false,
+                existing: relevantHistorySettings(custom[target.instance])
+            });
+            continue;
+        }
+
+        if (otherEnabled) {
+            conflictCount++;
+            report.push({
+                id: target.id,
+                target: target.instance,
+                profile: target.profile,
+                status: 'OTHER_INSTANCE_ACTIVE',
+                changed: false,
+                activeInstance: otherInstance,
+                note: 'Keine zweite History aktiviert; bestehende aktive History bleibt unverändert.'
+            });
+            continue;
+        }
+
+        missingCount++;
+
+        if (!applyMissing) {
+            report.push({
+                id: target.id,
+                target: target.instance,
+                profile: target.profile,
+                status: 'MISSING',
+                changed: false
+            });
+            continue;
+        }
+
+        const currentTargetSettings =
+            custom[target.instance] && typeof custom[target.instance] === 'object'
+                ? custom[target.instance]
+                : {};
+
+        // Nur der bislang inaktive Zielblock wird ergänzt/aktiviert.
+        // Alle anderen custom-Konfigurationen (statistics, andere Adapter, deaktivierte
+        // Influx-Instanz usw.) bleiben vollständig erhalten.
+        const mergedTargetSettings = {
+            ...currentTargetSettings,
+            ...HISTORY_PROFILES[target.profile],
+            enabled: true
+        };
+
+        const mergedCustom = {
+            ...custom,
+            [target.instance]: mergedTargetSettings
+        };
+
+        await extendObjectPromise(target.id, {
+            common: {
+                custom: mergedCustom
+            }
+        });
+
+        appliedCount++;
+        report.push({
+            id: target.id,
+            target: target.instance,
+            profile: target.profile,
+            status: 'APPLIED_MISSING',
+            changed: true,
+            applied: relevantHistorySettings(mergedTargetSettings)
+        });
+    }
+
+    // Geschützte Quellen nur prüfen, niemals verändern.
+    for (const protectedItem of HISTORY_PROTECTED) {
+        const obj = getObject(protectedItem.id);
+        if (!obj || obj.type !== 'state') {
+            report.push({
+                id: protectedItem.id,
+                target: protectedItem.expectedInstance,
+                status: 'PROTECTED_OBJECT_MISSING',
+                changed: false,
+                note: protectedItem.reason
+            });
+            continue;
+        }
+
+        const custom = obj.common && obj.common.custom ? obj.common.custom : {};
+        const expectedEnabled = isHistoryEnabled(custom, protectedItem.expectedInstance);
+        const otherInstance = otherInfluxInstance(protectedItem.expectedInstance);
+        const otherEnabled = isHistoryEnabled(custom, otherInstance);
+
+        if (expectedEnabled && otherEnabled) {
+            duplicateCount++;
+            conflictCount++;
+            report.push({
+                id: protectedItem.id,
+                target: protectedItem.expectedInstance,
+                status: 'PROTECTED_DUPLICATE_ACTIVE',
+                changed: false,
+                note: `${protectedItem.reason}; beide Influx-Instanzen aktiv, keine automatische Änderung.`
+            });
+        } else {
+            report.push({
+                id: protectedItem.id,
+                target: protectedItem.expectedInstance,
+                status: expectedEnabled ? 'PROTECTED_OK' : 'PROTECTED_EXPECTED_INSTANCE_NOT_ACTIVE',
+                changed: false,
+                note: protectedItem.reason
+            });
+        }
+    }
+
+    const status =
+        duplicateCount > 0 ? 'DOPPELHISTORIE_GEFUNDEN' :
+        conflictCount > 0 ? 'KONFLIKTE_GEFUNDEN' :
+        missingObjectCount > 0 ? 'DATENPUNKTE_FEHLEN' :
+        missingCount > appliedCount ? 'HISTORY_FEHLT' :
+        'OK';
+
+    await setStateAsync(id('HistoryConfig.Mode'), HISTORY_POLICY.MODE, true);
+    await setStateAsync(id('HistoryConfig.ManagedCount'), HISTORY_TARGETS.length, true);
+    await setStateAsync(id('HistoryConfig.PreservedCount'), preservedCount, true);
+    await setStateAsync(id('HistoryConfig.MissingCount'), missingCount, true);
+    await setStateAsync(id('HistoryConfig.ConflictCount'), conflictCount, true);
+    await setStateAsync(id('HistoryConfig.DuplicateCount'), duplicateCount, true);
+    await setStateAsync(id('HistoryConfig.MissingObjectCount'), missingObjectCount, true);
+    await setStateAsync(id('HistoryConfig.AppliedCount'), appliedCount, true);
+    await setStateAsync(id('HistoryConfig.LastAudit'), nowText(), true);
+    await setStateAsync(id('HistoryConfig.Status'), status, true);
+    await setStateAsync(id('HistoryConfig.ReportJson'), JSON.stringify(report), true);
+
+    log(
+        `[${MODULE.NAME}] HistoryConfig ${applyMissing ? 'APPLY' : 'AUDIT'}: ` +
+        `${HISTORY_TARGETS.length} verwaltet | ${preservedCount} unverändert | ` +
+        `${missingCount} fehlend | ${appliedCount} ergänzt | ` +
+        `${conflictCount} Konflikt(e) | ${duplicateCount} Doppelhistorie(n) | ` +
+        `${missingObjectCount} Objekt(e) fehlen.`,
+        duplicateCount > 0 || conflictCount > 0 ? 'warn' : 'info'
+    );
+
+    return {
+        status,
+        preservedCount,
+        missingCount,
+        conflictCount,
+        duplicateCount,
+        missingObjectCount,
+        appliedCount,
+        report
+    };
 }
 
 function normalizeHistoryResponse(response) {
@@ -619,6 +1042,20 @@ function subscribeEvents() {
         if (obj && obj.state && obj.state.val === true) refresh('MANUELL');
     }));
 
+    subscriptions.push(on({ id: id('Command.AuditHistoryConfig'), change: 'ne' }, obj => {
+        if (!obj || !obj.state || obj.state.val !== true) return;
+        auditHistoryConfig(false)
+            .catch(error => log(`[${MODULE.NAME}] History-Audit fehlgeschlagen: ${error && error.message ? error.message : error}`, 'error'))
+            .finally(() => setState(id('Command.AuditHistoryConfig'), false, true));
+    }));
+
+    subscriptions.push(on({ id: id('Command.ApplyHistoryConfig'), change: 'ne' }, obj => {
+        if (!obj || !obj.state || obj.state.val !== true) return;
+        auditHistoryConfig(true)
+            .catch(error => log(`[${MODULE.NAME}] History-Apply fehlgeschlagen: ${error && error.message ? error.message : error}`, 'error'))
+            .finally(() => setState(id('Command.ApplyHistoryConfig'), false, true));
+    }));
+
     subscriptions.push(on({ id: SOURCE.CYCLE_REPORT, change: 'ne' }, obj => {
         if (!obj || !obj.state || obj.state.ack !== true) return;
         // Kurze Verzögerung, damit der neue JSON-Wert sicher in InfluxDB gespeichert ist.
@@ -644,6 +1081,12 @@ async function start() {
     await setStateAsync(id('System.LastMessage'), 'Modul gestartet', true);
 
     subscribeEvents();
+
+    // Beim Start wird ausschließlich geprüft. Es wird nichts automatisch verändert.
+    await auditHistoryConfig(false);
+    if (HISTORY_POLICY.APPLY_ON_STARTUP) {
+        await auditHistoryConfig(true);
+    }
 
     const config = readConfig();
     if (!config.enabled) {

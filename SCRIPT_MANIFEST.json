@@ -78,8 +78,8 @@
       "file": "scripts/11_NPS_InfluxAdapter.js",
       "source_export": "NPS_-_11_NPS_InfluxAdapter.json",
       "enabled_in_export": true,
-      "version": "1.0.2",
-      "sha256": "49d7557a110187de43b1c9485dfc9c147f9fab43ad3844a7705466736959af9d"
+      "version": "1.1.0-rc.1",
+      "sha256": "e81a4b35a4d138b437e3c978f993f2f89be8cc4fcfaf4ce1dee8ab30d33caac9"
     },
     {
       "file": "scripts/12_NPS_ElectricalMeters.js",

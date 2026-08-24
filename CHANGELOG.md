@@ -16,7 +16,7 @@ The project follows semantic versioning principles for repository releases.
 - Documented the complete NPS V1.0.0 development and test environment, including Matrix integration.
 - Added repository-wide MIT license (`LICENSE`).
 ### Changed
-
+- Updated `11_NPS_InfluxAdapter` to `1.1.0-rc.1`: added conservative `SAFE_ADD_ONLY` management of DashboardData history assignments for Jarvis HistoryGraphs; existing active histories are preserved, cross-instance conflicts and duplicate activations are diagnosed without automatic modification, and missing histories can be added explicitly via `Command.ApplyHistoryConfig`.
 - Finalized the NPS V1.0.0 baseline and documented the completed Modbus rest scan; six non-NPS input registers are intentionally retained.
 - Finalized Alias/Modbus documentation: compressor demand/heater status aliases are now present and all NPS V1 production alias references are resolved.
 - Corrected stale header-only module dependency references to the tested V1 baseline.

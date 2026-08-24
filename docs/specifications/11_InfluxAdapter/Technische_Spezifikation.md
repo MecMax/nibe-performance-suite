@@ -1,37 +1,33 @@
-# Technische Spezifikation – 11_NPS_InfluxAdapter v1.0.4
+# Technische Spezifikation – 11_NPS_InfluxAdapter v1.1.0-rc.1
 
-**NIBE Performance Suite (NPS) · Modul 11**  
-**Stand:** 22.08.2026  
-**Bezugsstand:** `11_NPS_InfluxAdapter v1.0.4`  
-**Status:** STABIL / PASS
+**NIBE Performance Suite (NPS) · Modul 11**
+**Stand:** 23.08.2026
+**Bezugsstand:** `11_NPS_InfluxAdapter v1.1.0-rc.1`
+**Status:** RELEASE CANDIDATE / FUNKTIONSPRÜFUNG PASS
 
 ## 1. Modulidentität
 
 | Merkmal | Festlegung |
 |---|---|
 | Modul | `11_NPS_InfluxAdapter` |
-| Version | `1.0.4` |
-| Architekturschicht | Historischer Datenadapter |
+| Version | `1.1.0-rc.1` |
+| Architekturschicht | Historischer Datenadapter / Persistenz-Konfigurationswächter |
 | Root | `0_userdata.0.NPS.InfluxAdapter` |
-| Historische Quelle | `CycleAnalyzer.History.CycleReportJson` |
-| Standard-Influxinstanz | `influxdb.1` |
+| Historische CycleReport-Quelle | `CycleAnalyzer.History.CycleReportJson` |
+| CycleReport-Influxinstanz | `influxdb.1` |
+| History-Verwaltungsmodus | `SAFE_ADD_ONLY` |
+| Verwaltete HistoryGraph-DPs | 28 |
 
 ## 2. Verantwortung
 
-Der InfluxAdapter liest historische vollständige CycleReports aus InfluxDB und transformiert sie in eine für nachgelagerte NPS-Module direkt nutzbare Struktur.
+Der InfluxAdapter hat zwei klar getrennte Verantwortungsbereiche:
 
-Nicht Bestandteil der Verantwortung sind:
+1. Historische vollständige CycleReports aus InfluxDB lesen, validieren, deduplizieren und für nachgelagerte NPS-Module aufbereiten.
+2. Die InfluxDB-History-Konfiguration der für Jarvis-HistoryGraphs vorgesehenen `DashboardData`-Datenpunkte prüfen und fehlende Konfigurationen nach explizitem Befehl sicher ergänzen.
 
-```text
-Energieberechnung
-COP-Berechnung
-Zyklusbildung
-Zyklusbewertung
-Schreiben der CycleReports
-Änderung von Quelldaten
-```
+Nicht Bestandteil der Verantwortung sind Energie-, COP- oder Zyklusberechnung, Zyklusbewertung, Schreiben oder Rekonstruktion von CycleReports, Migration historischer Daten oder automatische Korrektur bestehender History-Konflikte.
 
-## 3. Datenfluss
+## 3. Datenfluss CycleReports
 
 ```text
 98 CycleRecorder
@@ -47,201 +43,275 @@ influxdb.1
 14 PerformanceAnalyzer
 ```
 
-## 4. InfluxDB-Architektur
+Die neue HistoryGraph-Verwaltung verändert diesen Datenfluss nicht.
 
-Die NPS unterscheidet bewusst zwischen den InfluxDB-Instanzen.
+## 4. InfluxDB-Architektur
 
 ### 4.1 influxdb.1
 
-Für den InfluxAdapter fachlich maßgeblich:
-
-```text
-CycleAnalyzer.History.CycleReportJson
-→ influxdb.1
-→ InfluxAdapter
-```
+`influxdb.1` ist verbindliche historische Quelle für `CycleAnalyzer.History.CycleReportJson`. Zusätzlich werden dort die zeitlich höher aufgelösten DashboardData-Werte für Jarvis gespeichert.
 
 ### 4.2 influxdb.0
 
-`influxdb.0` wird für andere NPS-Zeitreihen verwendet, ist aber nicht die historische Quelle des InfluxAdapters.
+`influxdb.0` wird für langfristige Tages- und Aggregatwerte der DashboardData-HistoryGraphs verwendet. Es ist nicht die CycleReport-Quelle des InfluxAdapters.
 
-Eine Änderung des InfluxAdapter-Defaults von `.1` auf `.0` ist daher keine technische Bereinigung, sondern würde die fachliche Datenquelle verändern.
+### 4.3 Doppelhistorie
 
-## 5. Konfiguration
+Für jeden der 28 verwalteten DashboardData-DPs darf im Sollzustand nur eine der beiden InfluxDB-Instanzen aktiv sein. Eine gleichzeitige Aktivierung wird als `DUPLICATE_ACTIVE` diagnostiziert und nicht automatisch verändert.
 
-Verbindlicher Konfigurationsstate:
+## 5. CycleReport-Konfiguration
+
+Verbindlicher State:
 
 ```text
 0_userdata.0.NPS.InfluxAdapter.Configuration.InfluxInstance
 ```
 
-Sollwert:
+Sollwert und Default:
 
 ```text
 influxdb.1
 ```
 
-Default in v1.0.4:
-
-```javascript
-INFLUX_INSTANCE: 'influxdb.1'
-```
-
-## 6. Historienquelle
+Die geschützte Quelle lautet:
 
 ```text
 0_userdata.0.NPS.CycleAnalyzer.History.CycleReportJson
 ```
 
-Die Historie dieses States enthält vollständige JSON-Dokumente bereits abgeschlossener und vom CycleAnalyzer bewerteter Zyklen.
+Sie wird von der HistoryGraph-Verwaltung ausschließlich geprüft und niemals verändert.
 
-## 7. Abfrageprinzip
+## 6. HistoryGraph-Profile
 
-Pro Refresh wird genau eine Historienabfrage für `CycleReportJson` ausgeführt.
+### Profil A – Tages-/Langzeitwerte
 
-Die Abfrage liefert die im konfigurierten Zeitraum verfügbaren historischen Werte. Die weitere Aufbereitung erfolgt lokal im Adapter.
+- Instanz: `influxdb.0`
+- `changesOnly = true`
+- `blockTime = 0`
+- `changesRelogInterval = 0`
+- `changesMinDelta = 0`
 
-Dadurch werden nicht für jede Kennzahl separate Influx-Abfragen benötigt.
+Verwendet für Statistics-`Yesterday`, `Energy.History.*PerDay` und `Compressor.History.*PerDay`.
 
-## 8. Verarbeitungspipeline
+### Profil B – kontinuierliche Mess-/Sollwerte
 
-```text
-Influx-History
-    ↓
-Rohwerte extrahieren
-    ↓
-JSON parsen
-    ↓
-Schema/Plausibilität prüfen
-    ↓
-ungültige Reports verwerfen
-    ↓
-Duplikate entfernen
-    ↓
-chronologisch/fachlich aufbereiten
-    ↓
-nach Zyklustyp trennen
-    ↓
-Public API aktualisieren
-```
+- Instanz: `influxdb.1`
+- `changesOnly = true`
+- `blockTime = 0`
+- `changesRelogInterval = 300`
+- `changesMinDelta = 0`
 
-## 9. Deduplizierung
+Verwendet für `Outdoor`, `SupplyTarget`, `Supply`, `Return`, `Warmwater`, `WarmwaterCharging`. Das 300-s-Relog stellt bei konstanten Werten Stützpunkte für HistoryGraphs bereit.
 
-Mehrfach vorhandene identische CycleReports dürfen in den Ergebnislisten nicht mehrfach erscheinen.
+### Profil C – dynamische Betriebswerte
 
-Die Deduplizierung ist Bestandteil der Adapterlogik und verändert die zugrunde liegende InfluxDB-Historie nicht.
+- Instanz: `influxdb.1`
+- `changesOnly = true`
+- `blockTime = 60000`
+- `changesRelogInterval = 0`
 
-## 10. Typtrennung
+Verwendet für `DeltaT`, `Flow`, `Compressor.Frequency`.
 
-Die gültigen CycleReports werden in fachliche Gruppen aufgeteilt, insbesondere:
+### Profil D – Ereignis-/Zykluswerte
 
-```text
-Heizung
-Warmwasser
-Abtauung
-```
+- Instanz: `influxdb.1`
+- `changesOnly = true`
+- `blockTime = 0`
+- `changesRelogInterval = 0`
 
-Damit können nachgelagerte Auswertungen typspezifisch arbeiten, ohne die historische InfluxDB erneut abfragen zu müssen.
+Verwendet für `Defrost.Active`, `Cycles.COP`, `Cycles.Duration`, `Cycles.Quality`.
 
-## 11. Datenhoheit
+Für alle Profile gilt: Nullwerte werden nicht pauschal ignoriert; bestehende aktive Konfigurationen werden nicht auf das Profil umgeschrieben.
 
-Für Kennzahlen innerhalb eines CycleReports gilt:
+## 7. Verwaltete Datenpunkte
+
+### 7.1 Profil A / influxdb.0
 
 ```text
-CycleAnalyzer = fachliche Quelle
-InfluxAdapter = Transport-/Historienadapter
+Statistics.AnteilVerdichter.Yesterday
+Statistics.AnteilZusatzheizung.Yesterday
+Statistics.COPGesamt.Yesterday
+Statistics.COPHeizung.Yesterday
+Statistics.COPWarmwasser.Yesterday
+Energy.History.ElectricTotalPerDay
+Energy.History.ElectricHeatingPerDay
+Energy.History.ElectricWarmwaterPerDay
+Energy.History.ElectricZHPerDay
+Energy.History.HeatTotalPerDay
+Energy.History.HeatHeatingPerDay
+Energy.History.HeatWarmwaterPerDay
+Energy.History.HeatZHPerDay
+Compressor.History.StartsPerDay
+Compressor.History.RuntimePerDay
 ```
 
-Der InfluxAdapter übernimmt vorhandene Werte und berechnet insbesondere folgende Größen nicht neu:
+### 7.2 Profil B / influxdb.1
 
 ```text
-ElectricKWh
-HeatKWh
-COP
-Duration
-Temperaturen
-Frequenzen
-Qualitätskennzahlen
+Temperatures.Outdoor
+Temperatures.SupplyTarget
+Temperatures.Supply
+Temperatures.Return
+Temperatures.Warmwater
+Temperatures.WarmwaterCharging
 ```
 
-## 12. Refresh
-
-Der Adapter unterstützt einen expliziten Refresh über seine Command-Schnittstelle sowie die im Script vorgesehene automatische Aktualisierung.
-
-Ein Refresh soll genau eine Historienabfrage erzeugen.
-
-## 13. Fehlerbehandlung
-
-Fehler können insbesondere entstehen durch:
-
-- nicht verfügbare InfluxDB-Instanz,
-- fehlende Historienquelle,
-- fehlgeschlagene History-Abfrage,
-- ungültige JSON-Werte,
-- unvollständige CycleReports.
-
-Einzelne ungültige Reports dürfen die Verarbeitung gültiger Reports nicht verhindern.
-
-## 14. Persistenz
-
-Der InfluxAdapter selbst ist kein neues Langzeitarchiv.
-
-Die Langzeitpersistenz liegt bei:
+### 7.3 Profil C / influxdb.1
 
 ```text
-CycleAnalyzer.History.CycleReportJson
-→ influxdb.1
+Temperatures.DeltaT
+Temperatures.Flow
+Compressor.Frequency
 ```
 
-Die vom InfluxAdapter erzeugten Listen sind Arbeits-/Ausgabedaten für nachgelagerte Module und sollen nicht als redundante Kopie der vollständigen CycleReport-Historie betrachtet werden.
-
-## 15. Versionshistorie v1.0.4
+### 7.4 Profil D / influxdb.1
 
 ```text
-1.0.4 | 2026-08-22
-      | Architekturtrennung influxdb.0 / influxdb.1 ausdrücklich dokumentiert.
-      | influxdb.1 bleibt Standardinstanz für persistierte
-      | CycleAnalyzer-CycleReports.
-      | Zwischenzeitliche Umstellung auf influxdb.0 verworfen.
-      | Keine Änderung an Historienabfrage, Validierung,
-      | Deduplizierung, Typtrennung oder Refresh-Logik.
+Defrost.Active
+Cycles.COP
+Cycles.Duration
+Cycles.Quality
 ```
 
-## 16. Verifikation
+Alle Pfade liegen unter `0_userdata.0.NPS.DashboardData.`.
 
-Produktiver Test am 22.08.2026:
+## 8. SAFE_ADD_ONLY
+
+Der Algorithmus ist nicht destruktiv:
+
+| Ausgangslage | Verhalten |
+|---|---|
+| Zielinstanz aktiv | unverändert erhalten |
+| Zielinstanz aktiv, Einstellungen abweichend | unverändert erhalten und diagnostizieren |
+| andere Instanz aktiv | nichts hinzufügen; Konflikt melden |
+| beide Instanzen aktiv | Doppelhistorie melden; nichts ändern |
+| keine Instanz aktiv | als fehlend melden |
+| keine Instanz aktiv + explizites Apply | Zielprofil ergänzen |
+| State fehlt | fehlendes Objekt melden |
+
+Beim Start wird ausschließlich `auditHistoryConfig(false)` ausgeführt. Automatisches Apply beim Start ist deaktiviert.
+
+## 9. Commands und Diagnose-Public-API
 
 ```text
-Version 1.0.4 gestartet
-28 CycleReport(s) mit einer Influx-Abfrage geladen
+Command.Refresh
+Command.AuditHistoryConfig
+Command.ApplyHistoryConfig
+
+HistoryConfig.Mode
+HistoryConfig.ManagedCount
+HistoryConfig.PreservedCount
+HistoryConfig.MissingCount
+HistoryConfig.ConflictCount
+HistoryConfig.DuplicateCount
+HistoryConfig.MissingObjectCount
+HistoryConfig.AppliedCount
+HistoryConfig.LastAudit
+HistoryConfig.Status
+HistoryConfig.ReportJson
 ```
 
-Damit wurden folgende Punkte praktisch bestätigt:
+`ApplyHistoryConfig` ist als Taster ausgeführt und wird nach der Verarbeitung wieder auf `false` gesetzt.
 
-- Script startet fehlerfrei.
-- `influxdb.1` ist erreichbar.
-- `CycleReportJson` besitzt Historieneinträge.
-- die Historienabfrage funktioniert.
-- 28 CycleReports werden geladen.
-- eine einzige Influx-Abfrage genügt.
+## 10. Audit-Status
 
-## 17. Abnahmekriterien
+Der Audit unterscheidet u. a.:
 
-- Modulversion ist `1.0.4`.
-- Default-Influxinstanz ist `influxdb.1`.
-- Laufzeitkonfiguration verwendet `influxdb.1`.
-- Historienquelle ist `CycleAnalyzer.History.CycleReportJson`.
-- pro Refresh wird eine History-Abfrage verwendet.
-- gültige JSON-Reports werden verarbeitet.
-- ungültige Reports werden kontrolliert verworfen.
-- Duplikate werden entfernt.
-- Zyklustypen werden getrennt bereitgestellt.
-- Energie und COP werden nicht neu berechnet.
-- bestehende CycleReports können erfolgreich aus `influxdb.1` geladen werden.
-- `influxdb.0` wird nicht fälschlich als CycleReport-Quelle verwendet.
+```text
+PRESERVED_ACTIVE
+PRESERVED_ACTIVE_DIFFERENT_SETTINGS
+MISSING
+APPLIED_MISSING
+OTHER_INSTANCE_ACTIVE
+DUPLICATE_ACTIVE
+OBJECT_MISSING
+PROTECTED_OK
+PROTECTED_DUPLICATE_ACTIVE
+PROTECTED_EXPECTED_INSTANCE_NOT_ACTIVE
+```
 
-## 18. Freigabestatus
+Der zusammengefasste Status priorisiert Doppelhistorien und Konflikte vor fehlenden Konfigurationen.
 
-Der produktive Test mit 28 geladenen CycleReports bestätigt die korrekte Funktionsweise von v1.0.4 und die vorgesehene InfluxDB-Architektur.
+## 11. CycleReport-Abfrageprinzip
 
-**Freigabestatus: PASS**
+Pro Refresh wird genau eine Historienabfrage für `CycleReportJson` ausgeführt. Danach erfolgen JSON-Parsing, Plausibilitätsprüfung, Filterung, Deduplizierung, Sortierung und Typtrennung lokal im Adapter.
+
+Der InfluxAdapter berechnet insbesondere `ElectricKWh`, `HeatKWh`, `COP`, `Duration`, Temperaturen, Frequenzen und Qualitätskennzahlen nicht neu.
+
+## 12. Refresh und Laufzeit
+
+Der Adapter unterstützt Start-Refresh, `Command.Refresh` und automatischen Refresh nach einem neuen CycleReport. Das Skript ist als dauerhaft aktives NPS-Modul vorgesehen.
+
+Die History-Konfiguration wird nicht zyklisch umgeschrieben. Ein Audit erfolgt beim Start oder explizit über `Command.AuditHistoryConfig`.
+
+## 13. Fehler- und Konfliktbehandlung
+
+Fehler einzelner CycleReports verhindern nicht die Verarbeitung gültiger Reports. History-Konflikte werden diagnostiziert, aber nicht destruktiv korrigiert. Eine Migration historischer Daten zwischen InfluxDB-Instanzen findet nicht statt.
+
+## 14. Datenhoheit
+
+```text
+CycleAnalyzer = fachliche Quelle der CycleReports
+DashboardData = Public API der Präsentationsschicht
+InfluxDB = Zeitreihenpersistenz
+InfluxAdapter = CycleReport-Historienadapter + sicherer History-Konfigurationswächter
+```
+
+Der InfluxAdapter bleibt Single Writer für `0_userdata.0.NPS.InfluxAdapter`.
+
+## 15. Versionshistorie
+
+```text
+1.1.0-rc.1 | 2026-08-23
+           | Sichere Verwaltung der Jarvis-HistoryGraph-Persistenz ergänzt.
+           | 28 DashboardData-DPs mit Profil A–D definiert.
+           | SAFE_ADD_ONLY eingeführt.
+           | AuditHistoryConfig und ApplyHistoryConfig ergänzt.
+           | Doppelhistorien werden erkannt, aber nicht automatisch verändert.
+           | CycleReportJson/influxdb.1 bleibt geschützt.
+
+1.0.4      | 2026-08-22
+           | Architekturtrennung influxdb.0 / influxdb.1 dokumentiert.
+           | influxdb.1 bleibt CycleReport-Quelle.
+```
+
+## 16. Verifikation 23.08.2026
+
+Erster Audit vor Apply:
+
+```text
+28 verwaltet | 10 unverändert | 18 fehlend | 0 ergänzt |
+0 Konflikte | 0 Doppelhistorien | 0 Objekte fehlen
+```
+
+Nach explizitem Apply und Neustart:
+
+```text
+28 verwaltet | 28 unverändert | 0 fehlend | 0 ergänzt |
+0 Konflikte | 0 Doppelhistorien | 0 Objekte fehlen
+```
+
+Zusätzlich:
+
+```text
+30 CycleReport(s) mit einer Influx-Abfrage geladen
+```
+
+Damit sind bestehende CycleReport-Funktion, HistoryGraph-Zuordnung und Schutz vor Doppelhistorie praktisch bestätigt.
+
+## 17. Abnahmekriterien RC.1
+
+- Modulversion `1.1.0-rc.1`.
+- CycleReport-Quelle bleibt `influxdb.1`.
+- Pro Refresh genau eine CycleReport-History-Abfrage.
+- 28 DashboardData-History-DPs werden verwaltet.
+- Start führt nur Audit aus.
+- Bestehende aktive Historien werden nicht verändert.
+- Andere aktive Influx-Instanz wird nicht parallel ergänzt.
+- Doppelhistorien werden erkannt.
+- Fehlende Historie wird nur durch explizites Apply ergänzt.
+- Profil B besitzt 300-s-Relog für konstante Mess-/Sollwerte.
+- Nach Apply: 28/28 vorhanden, 0 Konflikte, 0 Doppelhistorien.
+- CycleReports werden weiterhin erfolgreich geladen.
+
+**Freigabestatus RC.1: FUNKTIONSPRÜFUNG PASS**
