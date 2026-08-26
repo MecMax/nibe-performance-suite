@@ -1,9 +1,10 @@
-# Persistenz-Spezifikation – 10_NPS_DashboardData v5.10.2
+# Persistenz-Spezifikation – 10_NPS_DashboardData v5.11.0-rc.2
 
-**NIBE Performance Suite (NPS) · Modul 10**  
-**Stand:** 22.08.2026  
-**Bezugsstand:** `10_NPS_DashboardData v5.10.2`  
-**Status:** FREIGEGEBEN
+**NIBE Performance Suite (NPS) · Modul 10**
+**Stand:** 26.08.2026
+**Bezugsstand:** `10_NPS_DashboardData v5.11.0-rc.2`
+**Strukturversion:** 35
+**Status:** RC / Funktionsprüfung PASS
 
 ## 1. Ziel
 
@@ -12,7 +13,8 @@ Diese Spezifikation trennt klar zwischen:
 1. fachlichen Quellzählern,
 2. `statistics.0`-Periodenbildung,
 3. fertigen DashboardData-Tageswerten,
-4. `influxdb.0`-Zeitreihen für HistoryGraphs.
+4. `influxdb.0`-Zeitreihen für HistoryGraphs,
+5. reinen Präsentationsprojektionen wie `HeatingOptimization`.
 
 Ziel ist die Vermeidung redundanter oder widersprüchlicher Persistenz.
 
@@ -32,7 +34,9 @@ ausgewählte fertige History-Werte
        influxdb.0
 ```
 
-`statistics.0` und `influxdb.0` haben damit unterschiedliche Aufgaben.
+`statistics.0` und `influxdb.0` haben unterschiedliche Aufgaben.
+
+Fachlich bereits verdichtete Analyseergebnisse werden von DashboardData nicht erneut akkumuliert.
 
 ## 3. statistics.0
 
@@ -40,26 +44,13 @@ ausgewählte fertige History-Werte
 
 DashboardData liest diese Werte, insbesondere `save.sumDelta`.
 
-Typische Perioden:
-
-```text
-15 Minuten
-60 Minuten
-24 Stunden
-Heute/Gestern
-Woche
-Monat
-Quartal
-Jahr
-```
-
 DashboardData soll seine daraus erzeugten Anzeige-DPs nicht erneut mit `statistics.0` akkumulieren.
 
 ## 4. influxdb.0
 
 `influxdb.0` ist die aktive Zeitreiheninstanz im konsolidierten NPS-Stand.
 
-Die deaktivierte frühere Instanz `influxdb.1` gehört nicht mehr zum Sollbestand.
+Die deaktivierte frühere Instanz `influxdb.1` gehört nicht mehr zum Sollbestand dieser DashboardData-Spezifikation.
 
 ## 5. DashboardData-Grundregel
 
@@ -75,6 +66,7 @@ Electrical.*
 Cycles.*
 Defrost.*
 Events.*
+HeatingOptimization.*
 System.*
 Help.*
 ```
@@ -89,8 +81,6 @@ Folgende fertige Tageswerte werden in `influxdb.0` historisiert:
 |---|---:|---|
 | `Compressor.History.StartsPerDay` | Anzahl | abgeschlossenes `statistics.0.save.sumDelta` |
 | `Compressor.History.RuntimePerDay` | min | abgeschlossenes `statistics.0.save.sumDelta` |
-
-Diese Werte sind bewusst für HistoryGraphs bestimmt.
 
 Sie werden nicht zusätzlich mit `statistics.0` versehen.
 
@@ -111,75 +101,70 @@ Folgende fertige Tageswerte werden in `influxdb.0` historisiert:
 
 Die Werte repräsentieren abgeschlossene Tagesperioden und dienen direkt der Zeitreihendarstellung.
 
-Sie werden nicht erneut mit `statistics.0` akkumuliert.
-
 ## 8. Energy-Periodenvergleich
 
 `Energy.PeriodComparisonJson` ist ein formatierter Anzeige-DP und wird nicht als Zeitreihe historisiert.
 
-Er enthält 14 Statistics-Perioden, die aus den zugrunde liegenden Statistics-Werten erzeugt werden.
-
-Die eigentliche Persistenz liegt an den fachlichen Quellen bzw. den fertigen Tages-History-DPs, nicht am JSON.
-
 ## 9. Performance-Periodenvergleich
 
-`Performance.PeriodComparisonJson` ist ebenfalls ein formatierter Anzeige-DP.
-
-Keine eigene Influx- oder Statistics-Persistenz.
-
-Die enthaltenen Kennzahlen werden bei Aktualisierung aus den fachlichen Periodenquellen neu berechnet.
+`Performance.PeriodComparisonJson` ist ebenfalls ein formatierter Anzeige-DP. Keine eigene Influx- oder Statistics-Persistenz.
 
 ## 10. Cycles.History
 
-`Cycles.History` ist eine begrenzte JSON-Tabelle der letzten maximal 20 abgeschlossenen Zyklen.
-
-Sie ist eine Anzeige-History innerhalb des States und keine Influx-Zeitreihe.
-
-Die zugrunde liegenden Zyklusdaten stammen aus CycleAnalyzer/CycleRecorder.
+`Cycles.History` ist eine begrenzte JSON-Tabelle der letzten maximal 20 abgeschlossenen Zyklen und keine Influx-Zeitreihe.
 
 ## 11. Events.History
 
-`Events.History` ist eine begrenzte JSON-Tabelle der letzten maximal 50 Ereignisse.
-
-Sie wird sequenzgesteuert aus EventEngine-Ereignissen aufgebaut.
-
-Keine zusätzliche `statistics.0`-Konfiguration; keine pauschale Influx-Historisierung des JSON-States.
+`Events.History` ist eine begrenzte JSON-Tabelle der letzten maximal 50 Ereignisse. Keine zusätzliche `statistics.0`-Konfiguration und keine pauschale Influx-Historisierung des JSON-States.
 
 ## 12. Temperatures
 
-DashboardData.Temperatures ist eine Präsentationskopie bzw. Ergänzung fachlicher Temperaturwerte.
-
-Langzeit-Temperaturhistorie soll an den dafür vorgesehenen fachlichen Temperatur-/Quellstates geführt werden, nicht redundant an sämtlichen DashboardData-Temperaturstates.
+DashboardData.Temperatures ist eine Präsentationskopie bzw. Ergänzung fachlicher Temperaturwerte. Langzeit-Temperaturhistorie soll an den vorgesehenen fachlichen Temperatur-/Quellstates geführt werden.
 
 ## 13. Overview / Health / System
 
-Health-, Status-, Diagnose-, Farb-, Icon- und Hilfsstates sind View-Model-Zustände.
-
-Sie benötigen grundsätzlich weder `statistics.0` noch eine pauschale Influx-Historisierung.
+Health-, Status-, Diagnose-, Farb-, Icon- und Hilfsstates sind View-Model-Zustände und benötigen grundsätzlich weder `statistics.0` noch eine pauschale Influx-Historisierung.
 
 ## 14. Electrical
 
-`Electrical.CurrentPower` ist ein Anzeige-Livewert.
+`Electrical.CurrentPower` ist ein Anzeige-Livewert. Die langfristige Datenhaltung erfolgt über ElectricalMeters bzw. die vorgesehenen fachlichen Quellen.
 
-Die langfristige elektrische Energie- und Leistungsdatenhaltung erfolgt über ElectricalMeters bzw. die vorgesehenen fachlichen Quellen. DashboardData erzeugt keine parallele Langzeitquelle.
+## 15. HeatingOptimization
 
-## 15. Unterschiedliche Erfassungsstartpunkte
+`DashboardData.HeatingOptimization` ist eine reine Präsentationsprojektion der fachlichen Daten aus `15_NPS_HeatingCurveAnalyzer`.
 
-Kumulative obere Energy-Werte und Statistics-Perioden können unterschiedliche Startzeitpunkte besitzen.
+Dies umfasst insbesondere:
 
-Daher ist beispielsweise nicht zwingend:
+- Status und aktuellen Anlagenzustand,
+- Raumkomfort und Raumabweichungen,
+- 72-h-Hauptanalyse,
+- Evidence-/Analysehinweise,
+- Datenqualität und Quellenprüfung,
+- aktuelle Heizungs-/Heizkurvenkonfiguration,
+- aufbereitete JSON-Tabellen.
+
+Die fachliche Analyse und Verdichtung erfolgt ausschließlich in `15_NPS_HeatingCurveAnalyzer`.
+
+Für `DashboardData.HeatingOptimization.*` wird daher weder `statistics.0` noch eine pauschale Historisierung über `influxdb.0` eingerichtet.
+
+Dies gilt auch für:
 
 ```text
-Energy.HeatHeating
-=
-PeriodComparison → Laufendes Jahr → Wärme Heizung
+HeatingOptimization.Tables.RoomsJson
+HeatingOptimization.Tables.AnalysisWindowsJson
+HeatingOptimization.Tables.EvidenceJson
+HeatingOptimization.Tables.DataQualityJson
 ```
 
-solange beide Werte aus ihren spezifizierten Quellen und Zeitbasen korrekt gebildet werden.
+Diese States sind Präsentationstabellen und keine Zeitreihen.
 
-Diese Abweichung ist kein Persistenzfehler.
+Falls zukünftig Langzeitanalysen der Heizkurvenoptimierung benötigt werden, ist deren Persistenz fachlich am HeatingCurveAnalyzer bzw. an ausdrücklich dafür vorgesehenen History-States zu definieren. Eine redundante Historisierung der DashboardData-Präsentationsstates ist nicht vorgesehen.
 
-## 16. Sollmatrix
+## 16. Unterschiedliche Erfassungsstartpunkte
+
+Kumulative obere Energy-Werte und Statistics-Perioden können unterschiedliche Startzeitpunkte besitzen. Eine daraus entstehende Abweichung ist kein Persistenzfehler, solange beide Werte aus ihren spezifizierten Quellen und Zeitbasen korrekt gebildet werden.
+
+## 17. Sollmatrix
 
 | Bereich | `influxdb.0` | `statistics.0` auf DashboardData |
 |---|---|---|
@@ -194,14 +179,15 @@ Diese Abweichung ist kein Persistenzfehler.
 | Cycles | nein | nein |
 | Defrost | nein | nein |
 | Events | nein | nein |
+| HeatingOptimization | nein | nein |
 | System | nein | nein |
 | Help | nein | nein |
 
-`*` Temperaturzeitreihen werden an den fachlich vorgesehenen Temperatur-/Quellstates historisiert.
+\* Temperaturzeitreihen werden an den fachlich vorgesehenen Temperatur-/Quellstates historisiert.
 
-## 17. Verbotene Doppelung
+## 18. Verbotene Doppelung
 
-Nicht zulässig ist eine Architektur nach dem Muster:
+Nicht zulässig:
 
 ```text
 Quellzähler
@@ -212,7 +198,17 @@ Quellzähler
 
 Ebenso soll ein bereits fachlich historisierter Livewert nicht ohne konkreten Zweck zusätzlich als identische DashboardData-Kopie historisiert werden.
 
-## 18. Abnahme
+Für HeatingOptimization gilt entsprechend:
+
+```text
+15_NPS_HeatingCurveAnalyzer
+→ fachliche Analyse/Verdichtung
+→ DashboardData.HeatingOptimization
+→ keine erneute fachliche Akkumulation
+→ keine pauschale redundante Historisierung
+```
+
+## 19. Abnahme
 
 Im Konsolidierungsstand vom 22.08.2026 wurde geprüft:
 
@@ -222,4 +218,12 @@ Im Konsolidierungsstand vom 22.08.2026 wurde geprüft:
 - DashboardData-Historywerte werden nicht nochmals statistisch akkumuliert,
 - Live-/View-Model-DPs werden nicht pauschal doppelt historisiert.
 
-**Persistenzstatus: PASS**
+Für v5.11.0-rc.2 wird zusätzlich festgelegt:
+
+- `HeatingOptimization.*` ist eine Präsentationsprojektion von Modul 15,
+- keine `statistics.0`-Akkumulation auf `DashboardData.HeatingOptimization.*`,
+- keine pauschale `influxdb.0`-Historisierung von `DashboardData.HeatingOptimization.*`,
+- die vier `HeatingOptimization.Tables.*`-JSON-States sind reine Präsentationsdaten,
+- zukünftige Langzeitpersistenz der Heizkurvenanalyse ist fachlich in Modul 15 bzw. ausdrücklich vorgesehenen History-States zu spezifizieren.
+
+**Persistenzstatus: RC / Funktionsprüfung PASS**

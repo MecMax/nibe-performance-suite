@@ -18,6 +18,8 @@ The project follows semantic versioning principles for repository releases.
 - Documented the complete NPS V1.0.0 development and test environment, including Matrix integration.
 - Added repository-wide MIT license (`LICENSE`).
 ### Changed
+
+- Updated `10_NPS_DashboardData` to `5.11.0-rc.2` (StructureVersion 35): added the `HeatingOptimization` presentation layer for `15_NPS_HeatingCurveAnalyzer`, including Status, Current, Rooms, 72-hour Analysis, Evidence, DataQuality, Configuration, Jarvis tables and `Help.HeatingOptimization`; DashboardData remains a presentation layer and does not duplicate the heating-curve analysis or persistence logic of module 15.
 - Updated `11_NPS_InfluxAdapter` to `1.1.0-rc.1`: added conservative `SAFE_ADD_ONLY` management of DashboardData history assignments for Jarvis HistoryGraphs; existing active histories are preserved, cross-instance conflicts and duplicate activations are diagnosed without automatic modification, and missing histories can be added explicitly via `Command.ApplyHistoryConfig`.
 - Finalized the NPS V1.0.0 baseline and documented the completed Modbus rest scan; six non-NPS input registers are intentionally retained.
 - Finalized Alias/Modbus documentation: compressor demand/heater status aliases are now present and all NPS V1 production alias references are resolved.

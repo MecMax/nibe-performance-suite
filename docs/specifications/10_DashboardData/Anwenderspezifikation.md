@@ -1,16 +1,16 @@
-# Anwenderspezifikation – 10_NPS_DashboardData v5.10.2
+# Anwenderspezifikation – 10_NPS_DashboardData v5.11.0-rc.2
 
-**NIBE Performance Suite (NPS) · Modul 10**  
-**Stand:** 22.08.2026  
-**Bezugsstand:** `10_NPS_DashboardData v5.10.2`  
-**Strukturversion:** 33  
-**Status:** STABIL / PASS
+**NIBE Performance Suite (NPS) · Modul 10**
+**Stand:** 26.08.2026
+**Bezugsstand:** `10_NPS_DashboardData v5.11.0-rc.2`
+**Strukturversion:** 35
+**Status:** RC / Funktionsprüfung PASS
 
 ## 1. Zweck
 
 DashboardData ist die zentrale Präsentations- und View-Model-Schicht der NIBE Performance Suite. Das Modul sammelt bereits fachlich aufbereitete Werte aus den NPS-Modulen, vereinheitlicht Darstellung, Einheiten, Rundung, Farben, Tabellen und Hilfetexte und stellt eine stabile Schnittstelle für Jarvis bereit.
 
-DashboardData verändert keine fachlichen Quelldaten.
+DashboardData verändert keine fachlichen Quelldaten und führt keine zweite fachliche Berechnung durch, wenn die entsprechende Bewertung bereits durch ein spezialisiertes NPS-Modul erfolgt.
 
 ## 2. Hauptbereiche
 
@@ -26,11 +26,14 @@ Electrical
 Cycles
 Defrost
 Events
+HeatingOptimization
 System
 Help
 ```
 
 Zusätzlich existieren interne bzw. ergänzende Perioden- und Statistikbereiche.
+
+Der Bereich `HeatingOptimization` stellt seit v5.11.0 die Präsentationsschnittstelle für `15_NPS_HeatingCurveAnalyzer` bereit.
 
 ## 3. Datenquellen
 
@@ -44,8 +47,11 @@ Grundregeln:
 - Zyklusdaten aus CycleAnalyzer/StateMachine.
 - Ereignisse aus EventEngine.
 - Abtaudaten aus DefrostMonitor.
+- Heizungsanalyse, Heizkurvenbewertung, Raumkomfortanalyse, Evidence und Datenqualität aus `15_NPS_HeatingCurveAnalyzer`.
 
-DashboardData ist keine zweite Berechnungsquelle für Messwerte, die bereits fachlich in einem Quellmodul vorliegen.
+DashboardData ist keine zweite Berechnungsquelle für Messwerte oder Bewertungen, die bereits fachlich in einem Quellmodul vorliegen.
+
+Insbesondere führt DashboardData keine eigene Heizkurvenanalyse durch. Die fachliche Bewertung erfolgt ausschließlich in `15_NPS_HeatingCurveAnalyzer`.
 
 ## 4. Overview
 
@@ -106,36 +112,18 @@ Der Verdichterbereich enthält unter anderem:
 
 Der Zyklusbereich zeigt den aktuellen und den letzten abgeschlossenen Zyklus.
 
-Wichtige Semantik:
-
 ```text
 Cycles.Active = false
 → Cycles.CurrentDuration = 0 min
 ```
 
-`CurrentDuration` beschreibt ausschließlich einen aktuell laufenden Verdichtertakt.
-
-`Duration`, `COP`, Energie, Qualität und Typ können dagegen Daten des letzten abgeschlossenen Zyklus enthalten.
+`CurrentDuration` beschreibt ausschließlich einen aktuell laufenden Verdichtertakt. `Duration`, `COP`, Energie, Qualität und Typ können dagegen Daten des letzten abgeschlossenen Zyklus enthalten.
 
 `Cycles.History` enthält maximal 20 abgeschlossene Zyklen.
 
 ## 9. Temperatures
 
-Bereitgestellt werden insbesondere:
-
-- Außentemperatur,
-- Vorlauf IST,
-- Vorlauf SOLL,
-- Vorlaufabweichung,
-- Rücklauf,
-- Spreizung,
-- mittlere Heizwassertemperatur,
-- Temperaturhub,
-- Volumenstrom,
-- Warmwasser oben BT7,
-- Warmwasserbereitung BT6.
-
-Die Vorlaufabweichung ist:
+Bereitgestellt werden insbesondere Außentemperatur, Vorlauf IST/SOLL, Vorlaufabweichung, Rücklauf, Spreizung, mittlere Heizwassertemperatur, Temperaturhub, Volumenstrom sowie Warmwasser BT7/BT6.
 
 ```text
 SupplyDeviation = Supply - SupplyTarget
@@ -143,103 +131,238 @@ SupplyDeviation = Supply - SupplyTarget
 
 ## 10. Defrost
 
-Der Bereich enthält unter anderem:
-
-```text
-Active
-Duration
-Count
-LastDuration
-LastStart
-QualityColor
-```
+Der Bereich enthält insbesondere `Active`, `Duration`, `Count`, `LastDuration`, `LastStart` und `QualityColor`.
 
 Weitere Detailwerte können weiterhin direkt aus der Public API des DefrostMonitor stammen, wenn DashboardData dafür kein Pendant besitzt.
 
 ## 11. Events
 
-DashboardData übernimmt neue EventEngine-Ereignisse sequenzgesteuert.
-
-`Events.History` enthält maximal 50 Ereignisse. Zusätzlich existieren Tageszähler für Heizzyklen, Warmwasserzyklen, Abtauungen, Warnungen und Fehler.
+DashboardData übernimmt neue EventEngine-Ereignisse sequenzgesteuert. `Events.History` enthält maximal 50 Ereignisse. Zusätzlich existieren Tageszähler für Heizzyklen, Warmwasserzyklen, Abtauungen, Warnungen und Fehler.
 
 Watchdog-Refreshes erzeugen keine Ereignisduplikate.
 
-## 12. System
+## 12. HeatingOptimization / Heizungsanalyse
 
-Der Systembereich enthält unter anderem:
+`HeatingOptimization` ist die Jarvis-optimierte Präsentationsschnittstelle für `15_NPS_HeatingCurveAnalyzer`.
+
+Ziel ist die übersichtliche Darstellung der Informationen, mit denen beurteilt werden kann, ob Heizkurve, Vorlauf-Sollwert und Raumkomfort zur aktuellen Gebäude- und Witterungssituation passen.
+
+Die fachliche Analyse erfolgt ausschließlich in Modul 15. DashboardData liest, strukturiert, formatiert und präsentiert dessen Ergebnisse.
 
 ```text
-Version
-StructureVersion
-SourceVersion
-Status
-DataValid
-ErrorCounter
-UpdateCounter
-HealthPercent
-HealthState
-HealthColor
-HealthMessage
-TechnicalState
-TechnicalStateCode
-TechnicalMessage
-LastUpdate
-Ruecksprung
+HeatingOptimization.Status
+HeatingOptimization.Current
+HeatingOptimization.Rooms
+HeatingOptimization.Analysis
+HeatingOptimization.Evidence
+HeatingOptimization.DataQuality
+HeatingOptimization.Configuration
+HeatingOptimization.Tables
 ```
+
+### 12.1 Status
+
+Insbesondere:
+
+```text
+Active
+Valid
+DataQualityPercent
+DataQualityState
+AnalysisReady
+LastUpdate
+SourceTimestamp
+```
+
+### 12.2 Current
+
+Insbesondere:
+
+```text
+OperatingPriority
+OperatingModeText
+OutdoorTemperature
+FlowTarget
+FlowActual
+SupplyDeviation
+ReturnTemperature
+DeltaT
+DegreeMinutes
+CompressorActive
+CompressorFrequency
+VolumeFlow
+AdditionalHeatActive
+DefrostActive
+SampleValid
+SampleQuality
+```
+
+### 12.3 Rooms
+
+Insbesondere:
+
+```text
+Count
+ActiveCount
+DataValidCount
+ValidForHeatingCurveCount
+TooColdCount
+OKCount
+TooWarmCount
+AverageDeviation
+MedianDeviation
+DeviationStdDev
+DeviationRange
+ColdestRoom
+ColdestRoomDeviation
+WarmestRoom
+WarmestRoomDeviation
+```
+
+### 12.4 72-h-Hauptanalyse
+
+```text
+Valid
+ValidHeatingHours
+DataQualityPercent
+AvgOutdoorTemperature
+AvgFlowTarget
+AvgFlowActual
+AvgFlowDeviation
+AvgRoomDeviation
+MedianRoomDeviation
+TooColdRatio
+OKRatio
+TooWarmRatio
+CompressorRuntimePercent
+AdditionalHeatRuntimePercent
+```
+
+Eine ungültige oder noch nicht bereite Analyse bedeutet nicht automatisch einen Anlagenfehler.
+
+### 12.5 Evidence / Analysehinweise
+
+```text
+GlobalTemperatureState
+FlowTrackingState
+OutdoorDependenceState
+RoomImbalance
+AdditionalHeatInfluence
+SensorMismatch
+InsufficientData
+```
+
+DashboardData erzeugt diese fachlichen Aussagen nicht selbst.
+
+### 12.6 Datenqualität
+
+Insbesondere:
+
+```text
+SourceCheckOk
+RequiredTotal
+RequiredOk
+RequiredMissing
+OptionalTotal
+OptionalOk
+OptionalMissing
+RoomSourcesConfigured
+RoomSourcesValid
+Percent
+State
+SampleQuality
+SampleValid
+ValidHeatingHours
+AnalysisReady
+```
+
+### 12.7 Konfiguration
+
+Insbesondere:
+
+```text
+HeatingCurve
+HeatingCurveOffset
+FlowMin
+FlowMax
+HeatingStartUndertemp
+HeatingStopTemperature
+AdditionalHeatStopTemperature
+AutoFilterTime
+MaxFlowDifferenceCompressor
+OperatingMode
+OperatingModeText
+HeatingAutomatic
+ChangedAt
+CustomCurveP1 … CustomCurveP7
+PointOutdoorTemperature
+PointOffset
+```
+
+DashboardData verändert diese Konfiguration nicht.
+
+### 12.8 Tabellen
+
+```text
+HeatingOptimization.Tables.RoomsJson
+HeatingOptimization.Tables.AnalysisWindowsJson
+HeatingOptimization.Tables.EvidenceJson
+HeatingOptimization.Tables.DataQualityJson
+```
+
+Diese JSON-States sind Präsentationsdaten und keine eigenständigen fachlichen Datenquellen.
+
+### 12.9 Sommerbetrieb und unzureichende Datenbasis
+
+Wenn keine geeignete Heizperiode aktiv ist, können beispielsweise 0 gültige Heizstunden, 0 für die Heizkurve verwertbare Räume, `InsufficientData=true` und `AnalysisReady=false` vollständig korrekt sein.
+
+Dies ist insbesondere im Sommerbetrieb kein Fehler, sondern beschreibt eine aktuell nicht ausreichende Datenbasis für eine belastbare Heizkurvenbewertung.
+
+## 13. System
+
+Der Systembereich enthält unter anderem `Version`, `StructureVersion`, `SourceVersion`, `Status`, `DataValid`, `ErrorCounter`, `UpdateCounter`, Health- und Technical-State-Daten, `LastUpdate` und `Ruecksprung`.
 
 `Ruecksprung` ist ein statischer Navigationsdatenpunkt für Jarvis.
 
-## 13. Bedienhilfe
+## 14. Bedienhilfe
 
-Seit v5.10.x enthält DashboardData eine zentrale Bedienhilfe:
+DashboardData enthält eine zentrale Bedienhilfe für Allgemein, System, Performance, Energy, Compressor, Temperatures, Cycles, Events, Defrost und HeatingOptimization sowie ein Manifest.
 
-- allgemeine Hilfe,
-- System,
-- Performance,
-- Energy,
-- Compressor,
-- Temperatures,
-- Cycles,
-- Events,
-- Defrost,
-- Manifest.
+Für die Heizungsanalyse steht `Help.HeatingOptimization` bereit.
 
-Die HTML-Inhalte werden aus einer zentral gepflegten Struktur erzeugt und können später auch als Grundlage einer Gesamtdokumentation dienen.
+## 15. Aktualisierung
 
-## 14. Aktualisierung
+DashboardData aktualisiert Livewerte ereignisgesteuert bei Änderungen relevanter Quellen, einschließlich `15_NPS_HeatingCurveAnalyzer`. Zusätzlich erfolgt ein vollständiger Watchdog-Refresh alle fünf Minuten.
 
-DashboardData aktualisiert Livewerte ereignisgesteuert bei Änderungen relevanter Quellen.
+## 16. Persistenz
 
-Zusätzlich erfolgt ein vollständiger Watchdog-Refresh alle fünf Minuten.
+DashboardData ist grundsätzlich eine Präsentationsschicht. Nur ausgewählte fertige Tageswerte für HistoryGraphs werden in `influxdb.0` historisiert.
 
-## 15. Persistenz
+`HeatingOptimization.*` ist eine Präsentationsprojektion von Modul 15 und wird weder pauschal über `influxdb.0` historisiert noch mit `statistics.0` akkumuliert.
 
-DashboardData ist grundsätzlich eine Präsentationsschicht. Nur ausgewählte fertige Tageswerte, die gezielt für HistoryGraphs erzeugt werden, werden in `influxdb.0` historisiert.
+Details siehe `Persistenz_Spezifikation.md`.
 
-`statistics.0` wird dagegen an den fachlichen Quellzählern verwendet und von DashboardData zur Periodenbildung gelesen.
+## 17. Funktionale Freigabe
 
-Die genaue Regel ist in `Persistenz_Spezifikation.md` dokumentiert.
+### 17.1 Konsolidierungsstand 22.08.2026
 
-## 16. Funktionale Freigabe
+Die Bereiche Overview, Performance, Energy, Compressor, Cycles, Temperatures, Defrost, Events und System wurden funktional geprüft und mit **PASS** bewertet. Für DashboardData selbst war in dieser Konsolidierungsrunde keine Codeänderung erforderlich.
 
-Am 22.08.2026 wurden die Bereiche:
+### 17.2 Erweiterung HeatingOptimization v5.11.0-rc.2
 
-```text
-Overview
-Performance
-Energy
-Compressor
-Cycles
-Temperatures
-Defrost
-Events
-System
-```
+Umgesetzt sind:
 
-funktional geprüft.
+- öffentliche `HeatingOptimization`-Struktur,
+- Statusprojektion,
+- aktueller Anlagenzustand,
+- Raumkomfortprojektion,
+- 72-h-Hauptanalyse,
+- Evidence-/Analysehinweise,
+- Datenqualitäts- und Quellenprüfung,
+- relevante Heizungs-/Heizkurvenkonfiguration,
+- Jarvis-Tabellen,
+- Bedienhilfe `Help.HeatingOptimization`.
 
-Alle geprüften Bereiche wurden mit **PASS** bewertet.
+DashboardData bleibt reine Präsentationsschicht. Die fachliche Heizungs- und Heizkurvenanalyse verbleibt vollständig in Modul 15.
 
-Für DashboardData selbst war aufgrund dieser Konsolidierungsrunde keine Codeänderung erforderlich.
-
-**Freigabestatus: PASS**
+**Freigabestatus: RC / Funktionsprüfung PASS**

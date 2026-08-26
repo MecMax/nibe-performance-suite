@@ -59,6 +59,9 @@ const SAMPLE_INTERVAL_MINUTES = 5;
 const SAMPLE_INTERVAL_MS = SAMPLE_INTERVAL_MINUTES * 60 * 1000;
 const MAX_BUFFER_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
+const SNAPSHOT_WARN_MS = 15000;
+const SNAPSHOT_ERROR_MS = 60000;
+
 const BUFFER_VERSION = '1.0';
 
 const MIN_ROOM_ANALYSIS_HOURS = 6;
@@ -4127,12 +4130,12 @@ async function runScheduledSample() {
         const duration =
             Date.now() - started;
 
-        if (duration > 60000) {
+        if (duration > SNAPSHOT_ERROR_MS) {
             log(
                 `${LOG_PREFIX} Snapshot-Laufzeit ${duration} ms`,
                 'error'
             );
-        } else if (duration > 10000) {
+        } else if (duration > SNAPSHOT_WARN_MS) {
             log(
                 `${LOG_PREFIX} Snapshot-Laufzeit ${duration} ms`,
                 'warn'

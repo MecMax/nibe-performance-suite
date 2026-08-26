@@ -3,8 +3,8 @@
  * -----------------------------------------------------------------------------
  * Modul:               10_NPS_DashboardData
  * Datei:               10_NPS_DashboardData.js
- * Version:             5.10.2
- * Build:               2026-08-18
+ * Version:             5.11.0-rc.2
+ * Build:               2026-08-25
  * Modulstatus:         STABIL
  * Architektur-Schicht: Präsentationsschicht / Dashboard-Datenadapter
  * Coding Standard:     NPS-CS-1.0
@@ -75,6 +75,26 @@
  *
  * Änderungsverlauf
  * ----------------
+ * 5.11.0-rc.2 | 2026-08-25
+ *             | Bedienhilfe für HeatingOptimization ergänzt.
+ *             | Neu: Help.HeatingOptimization als HTML-Hilfeseite für
+ *             | Anlagenstatus, Raumkomfort, 72-h-Heizkurvenanalyse,
+ *             | Analysehinweise, Datenqualität, Heizkurvenparameter und
+ *             | die drei Jarvis-HistoryGraphs.
+ *             | Help.Manifest enthält nun 10 Kapitel (Allgemein + 9 Detailseiten).
+ *             | Dokumentationsversion auf 1.1.0 und Strukturversion auf 35 erhöht.
+ * 5.11.0-rc.1 | 2026-08-24
+ *             | Neuer öffentlicher Bereich DashboardData.HeatingOptimization
+ *             | für 15_NPS_HeatingCurveAnalyzer v0.1.1.
+ *             | Reine Präsentationsprojektion ohne neue Heizungs-Fachlogik.
+ *             | Neu: Status, Current, Rooms, 72h-Hauptanalyse, Evidence,
+ *             | DataQuality, Configuration sowie vier fertige Jarvis-JSON-
+ *             | Tabellen RoomsJson, AnalysisWindowsJson, EvidenceJson und
+ *             | DataQualityJson.
+ *             | Komplexe Analyzer-JSONs werden robust geparst; Fehler einer
+ *             | Tabelle beeinträchtigen die übrigen Dashboardbereiche nicht.
+ *             | Modul-15-History wird nicht nach DashboardData dupliziert.
+ *             | Dashboard-Strukturversion auf 34 erhöht.
  * 5.10.1 | 2026-08-17
  *        | Bedienhilfen der acht Detailseiten vollständig ausgebaut.
  *        | Help.System, Performance, Energy, Compressor, Temperatures,
@@ -387,8 +407,8 @@
     'use strict';
 
     const CONFIG = {
-        VERSION: '5.10.2',
-        STRUCTURE_VERSION: 33,
+        VERSION: '5.11.0-rc.2',
+        STRUCTURE_VERSION: 35,
         EVENT_HISTORY_LIMIT: 50,
         COMP_FREQ_MAX_INTEGRATION_GAP_SECONDS: 600,
         CYCLE_HISTORY_LIMIT: 20,
@@ -426,7 +446,7 @@
     };
 
     const HELP_DOCUMENTATION = Object.freeze({
-        version: '1.0.0',
+        version: '1.1.0',
         title: 'NIBE Performance Suite – Bedienungs- und Auswertungshandbuch',
         chapters: Object.freeze([
             {
@@ -438,7 +458,7 @@
                     {
                         title: 'Navigation',
                         paragraphs: [
-                            'Die Hauptseite führt zu acht Detailseiten: System, Leistung & Effizienz, Energie, Verdichter, Temperaturen, Zyklus, Ereignisse und Enteisung.',
+                            'Die Hauptseite führt zu neun Detailseiten: System, Leistung & Effizienz, Energie, Verdichter, Temperaturen, Zyklus, Ereignisse, Enteisung und Heizungsanalyse.',
                             'Ein Pfeil nach rechts kennzeichnet den Sprung in eine Detailansicht. Ein Pfeil nach links kennzeichnet den Rücksprung zur NPS-Hauptseite.'
                         ]
                     },
@@ -1244,6 +1264,176 @@ code{background:#1f1f1f;padding:2px 5px;border-radius:4px;}
                         ]
                     }
                 ]
+            },
+            {
+                key: 'HeatingOptimization', number: 10, title: 'Heizungsanalyse',
+                html: `
+<style>
+body{font-family:Arial,Helvetica,sans-serif;background:#121212;color:#E0E0E0;margin:0;padding:0;}
+.wrap{padding:18px;line-height:1.6;}
+h1{font-size:24px;margin:0 0 14px;}
+h2{font-size:18px;margin:22px 0 8px;}
+p{margin:8px 0 12px;}
+table{width:100%;border-collapse:collapse;margin:10px 0 16px;}
+th,td{padding:8px 10px;border-bottom:1px solid #333;vertical-align:top;text-align:left;}
+th{font-weight:600;color:#FFF;}
+.note{padding:10px 12px;border-left:4px solid #78909C;background:#1b1b1b;margin:14px 0;}
+.good{color:lime}.green{color:green}.yellow{color:yellow}.orange{color:orange}.red{color:red}.grey{color:grey}
+code{background:#1f1f1f;padding:2px 5px;border-radius:4px;}
+.small{font-size:13px;color:#BDBDBD}
+</style>
+
+<div class="wrap">
+<h1>NPS – Heizungsanalyse</h1>
+<p>Die Detailseite „Heizungsanalyse“ visualisiert die Daten des Moduls <code>15_NPS_HeatingCurveAnalyzer</code>. Ziel ist die belastbare Beurteilung, ob Heizkurve, Vorlauf-Sollwert und Raumkomfort zur aktuellen Gebäude- und Witterungssituation passen.</p>
+
+<div class="note"><b>Wichtig:</b> Die Seite ist eine Analyse- und Beobachtungshilfe. Sie verändert keine NIBE-Parameter automatisch. Einzelne Momentwerte sind keine ausreichende Grundlage für eine Heizkurvenänderung.</div>
+
+<h2>1. Anlagenstatus</h2>
+<table>
+<tr><th>Kennzahl</th><th>Bedeutung</th></tr>
+<tr><td>Betriebsart</td><td>Aktueller Anlagenprozess, z. B. Standby, Warmwasser oder Heizen.</td></tr>
+<tr><td>Außentemperatur</td><td>Witterungsgröße, auf deren Basis die Heizkurve den Vorlauf-Sollwert bestimmt.</td></tr>
+<tr><td>Vorlauf SOLL / IST</td><td>Berechneter Sollwert der NIBE und tatsächlich gemessene Vorlauftemperatur.</td></tr>
+<tr><td>Vorlaufabweichung</td><td>Vorlauf IST minus Vorlauf SOLL. Nahe 0 K bedeutet gute Nachführung.</td></tr>
+<tr><td>Rücklauf / Spreizung</td><td>Rücklauftemperatur und Differenz zwischen Vorlauf und Rücklauf.</td></tr>
+<tr><td>Gradminuten</td><td>NIBE-Regelgröße für den aufgelaufenen Wärmebedarf.</td></tr>
+<tr><td>Verdichter / Frequenz</td><td>Zeigt, ob der Verdichter arbeitet und mit welcher Frequenz.</td></tr>
+<tr><td>Volumenstrom</td><td>Aktueller Heizwasservolumenstrom in l/min.</td></tr>
+<tr><td>Messpunkt gültig</td><td>Ob der aktuelle 5-Minuten-Punkt fachlich für die Heizkurvenanalyse nutzbar ist.</td></tr>
+<tr><td>Messpunktqualität</td><td>Qualität des aktuellen Samples in Prozent.</td></tr>
+</table>
+<p>Ein ungültiger Messpunkt ist nicht automatisch ein Fehler. Außerhalb einer geeigneten Heizphase, während Maintenance, Warmwasserbereitung, Enteisung oder bei anderen Ausschlussbedingungen kann <b>Messpunkt gültig = aus</b> vollkommen normal sein.</p>
+
+<h2>2. Raumkomfort</h2>
+<p>Die Raumkomfort-Auswertung betrachtet alle 13 konfigurierten Räume und vergleicht Isttemperatur und Solltemperatur.</p>
+<table>
+<tr><th>Abweichung</th><th>Bewertung</th></tr>
+<tr><td>&lt; -0,5 K</td><td style="color:#42A5F5;">Zu kalt</td></tr>
+<tr><td>-0,5 bis +0,5 K</td><td style="color:green;">Komfortbereich</td></tr>
+<tr><td>&gt; +0,5 K</td><td style="color:#FF9800;">Zu warm</td></tr>
+</table>
+<p>„Raumdaten gültig“ beschreibt die technische Verfügbarkeit der Raumdaten. „Für Heizkurve verwertbar“ ist strenger und berücksichtigt zusätzliche Ausschlussgründe wie inaktive Heizperiode, Maintenance, offene Fenster oder aktive Overrides.</p>
+<p>Die Raumübersicht zeigt je Raum Istwert, Sollwert, Abweichung, Komfortzustand, Analyse-Gültigkeit und den Ausschlussgrund.</p>
+
+<h2>3. Heizkurvenanalyse – 72 Stunden</h2>
+<p>Das 72-h-Fenster ist die Hauptanalyse der Jarvis-Seite. Es glättet kurzfristige Schwankungen und bleibt gleichzeitig zeitnah genug, um Änderungen an der Heizungsregelung nachvollziehen zu können.</p>
+<table>
+<tr><th>Kennzahl</th><th>Interpretation</th></tr>
+<tr><td>Gültige Heizstunden</td><td>Tatsächlich für die Analyse nutzbare Heizzeit.</td></tr>
+<tr><td>Datenqualität 72 h</td><td>Qualität der Datenbasis innerhalb des Analysefensters.</td></tr>
+<tr><td>Vorlaufabweichung Ø</td><td>Mittlere Nachführung von Vorlauf IST gegenüber SOLL.</td></tr>
+<tr><td>Raumabweichung Ø / Median</td><td>Gesamte Komfortlage der verwertbaren Räume.</td></tr>
+<tr><td>Anteil zu kalt / Komfort / zu warm</td><td>Verteilung der Raumbeobachtungen im Analysefenster.</td></tr>
+<tr><td>Verdichterlaufzeit</td><td>Anteil des Fensters mit Verdichterbetrieb.</td></tr>
+<tr><td>Zusatzheizungsanteil</td><td>Anteil des Fensters, der durch Zusatzheizung beeinflusst wurde.</td></tr>
+</table>
+<p>Zusätzlich zeigt die Tabelle „Analysefenster“ die Fenster 6 h, 24 h, 72 h und 7 Tage. Das 72-h-Fenster ist als Hauptanalyse gekennzeichnet.</p>
+
+<h2>4. Analysehinweise</h2>
+<p>„Analysehinweise“ sind aus den Messdaten abgeleitete Indizien. Sie sind keine automatische Stell-Empfehlung.</p>
+<table>
+<tr><th>Hinweis</th><th>Bedeutung</th></tr>
+<tr><td>Gesamttemperatur</td><td>Ob das Haus insgesamt passend, überwiegend zu kalt oder überwiegend zu warm ist.</td></tr>
+<tr><td>Vorlauf-Nachführung</td><td>Ob der tatsächliche Vorlauf dauerhaft unter oder über dem Sollwert liegt.</td></tr>
+<tr><td>Außentemperaturabhängigkeit</td><td>Ob sich die Raumabweichung systematisch mit der Außentemperatur verändert.</td></tr>
+<tr><td>Raumungleichgewicht</td><td>Ob einzelne Räume deutlich anders reagieren als der Rest des Hauses.</td></tr>
+<tr><td>Einfluss Zusatzheizung</td><td>Ob Zusatzheizung die betrachtete Datenlage beeinflusst.</td></tr>
+<tr><td>Außensensoren auffällig</td><td>Hinweis auf auffällige Differenzen der Außentemperaturquellen.</td></tr>
+<tr><td>Datenbasis unzureichend</td><td>Noch keine belastbare Aussage möglich.</td></tr>
+</table>
+
+<h2>5. Datenqualität und Analysebereitschaft</h2>
+<table>
+<tr><th>Status</th><th>Bedeutung</th></tr>
+<tr><td class="good">EXCELLENT</td><td>Mindestens 90 % Datenqualität.</td></tr>
+<tr><td class="green">GOOD</td><td>Mindestens 75 % Datenqualität.</td></tr>
+<tr><td class="orange">LIMITED</td><td>Mindestens 50 % Datenqualität; Aussage nur eingeschränkt belastbar.</td></tr>
+<tr><td class="red">INSUFFICIENT</td><td>Unter 50 % oder fachlich nicht ausreichende Datenbasis.</td></tr>
+</table>
+<p>Pflichtquellen müssen vollständig verfügbar sein. Fehlende optionale Quellen werden als Hinweis behandelt. „Analyse bereit = aus“ bedeutet häufig lediglich, dass noch nicht genügend gültige Heizstunden gesammelt wurden.</p>
+
+<h2>6. Heizkurvenparameter</h2>
+<p>Der Bereich zeigt die aktuelle NIBE-Konfiguration, die als Grundlage der Analyse dient: Heizkurve, Heizkurvenverschiebung, Vorlauf Minimum/Maximum, Heizungs-Stopp, Zusatzheizung-Stopp, Filterzeit und weitere Begrenzungen.</p>
+<p>Die erweiterte Heizkurve zeigt die Punkte P1 bis P7 sowie die Punktverschiebung. Diese Werte werden ausschließlich angezeigt; NPS verändert sie nicht.</p>
+
+<h2>7. HistoryGraph – Heizkurvenverlauf</h2>
+<p>Der 72-h-Heizkurvenverlauf stellt absolute Temperaturen auf einer gemeinsamen °C-Achse dar.</p>
+<table>
+<tr><th>Kurve</th><th>Farbe</th></tr>
+<tr><td>Außentemperatur</td><td><code>#42A5F5</code></td></tr>
+<tr><td>Vorlauf SOLL</td><td><code>#FBC02D</code></td></tr>
+<tr><td>Vorlauf IST</td><td><code>#EF6C3E</code></td></tr>
+<tr><td>Rücklauf</td><td><code>#AB47BC</code></td></tr>
+</table>
+<p>Der Graph hilft zu erkennen, wie sich der berechnete Sollwert mit der Witterung verändert und wie gut der tatsächliche Vorlauf folgt.</p>
+
+<h2>8. HistoryGraph – Raumkomfort</h2>
+<p>Der Raumkomfort-Graph verwendet eine gemeinsame K-Achse für Temperaturabweichungen.</p>
+<table>
+<tr><th>Kurve</th><th>Farbe</th></tr>
+<tr><td>Ø Raumabweichung</td><td><code>#66BB6A</code></td></tr>
+<tr><td>Median Raumabweichung</td><td><code>#43A047</code></td></tr>
+<tr><td>Abweichung kältester Raum</td><td><code>#42A5F5</code></td></tr>
+<tr><td>Abweichung wärmster Raum</td><td><code>#FF9800</code></td></tr>
+</table>
+
+<h2>9. HistoryGraph – Regelung / Verdichterbetrieb</h2>
+<p>Für die Regelungsbetrachtung werden Verdichterfrequenz und Gradminuten auf getrennten Y-Achsen dargestellt.</p>
+<table>
+<tr><th>Kurve</th><th>Achse</th><th>Farbe</th></tr>
+<tr><td>Verdichterfrequenz</td><td>Hz</td><td><code>#26A69A</code></td></tr>
+<tr><td>Gradminuten</td><td>GM</td><td><code>#7E57C2</code></td></tr>
+</table>
+<p>Der Volumenstrom wird nicht auf dieselbe Achse gelegt, da er mit l/min eine eigene Einheit besitzt.</p>
+
+<h2>10. Vorgehensweise bei der Heizkurvenoptimierung</h2>
+<p>Änderungen an der Heizkurve sollten erst nach einer ausreichenden, zusammenhängenden Heizdatenbasis bewertet werden. Entscheidend ist das Muster aus Außentemperatur, Vorlauf-Soll/Ist, Raumabweichungen und Analysehinweisen.</p>
+<table>
+<tr><th>Beobachtung</th><th>Mögliche Bedeutung</th></tr>
+<tr><td>Haus bei allen Außentemperaturen ähnlich zu kalt oder zu warm</td><td>Kann auf eine Parallelverschiebung der Heizkurve hindeuten.</td></tr>
+<tr><td>Bei sinkender Außentemperatur zunehmend zu kalt</td><td>Kann auf eine zu flache Heizkurve hindeuten.</td></tr>
+<tr><td>Bei sinkender Außentemperatur zunehmend zu warm</td><td>Kann auf eine zu steile Heizkurve hindeuten.</td></tr>
+<tr><td>Nur einzelne Räume weichen stark ab</td><td>Zuerst Raumregelung, Hydraulik, Fensterzustände oder Sollwerte prüfen.</td></tr>
+<tr><td>Vorlauf IST folgt SOLL dauerhaft schlecht</td><td>Zuerst die Vorlauf-Nachführung bzw. den Anlagenbetrieb prüfen, bevor die Heizkurve bewertet wird.</td></tr>
+</table>
+
+<div class="note"><b>Sommerbetrieb:</b> Wenn keine geeignete Heizperiode aktiv ist, können 0 gültige Heizstunden, 0 verwertbare Räume und „Datenbasis unzureichend“ vollständig korrekt sein. Das ist kein Fehler des HeatingCurveAnalyzer.</div>
+</div>
+`,
+                summary: 'Heizkurvenanalyse, Raumkomfort, Datenqualität und Interpretation der Heizungsoptimierung.',
+                sections: [
+                    {
+                        title: 'Grundsatz',
+                        paragraphs: [
+                            'Die Heizungsanalyse verbindet Anlagenzustand, Raumkomfort, Zeitfensteranalyse und Analysehinweise. Sie ist eine Beobachtungs- und Entscheidungshilfe und verändert keine NIBE-Parameter automatisch.',
+                            'Das 72-h-Fenster ist die Hauptanalyse. Änderungen an der Heizkurve sollten erst bei ausreichender Datenqualität und genügend gültigen Heizstunden bewertet werden.'
+                        ]
+                    },
+                    {
+                        title: 'Komfortgrenzen',
+                        table: {
+                            headers: ['Raumabweichung', 'Bewertung'],
+                            rows: [
+                                ['< -0,5 K', 'Zu kalt'],
+                                ['-0,5 bis +0,5 K', 'Komfortbereich'],
+                                ['> +0,5 K', 'Zu warm']
+                            ]
+                        }
+                    },
+                    {
+                        title: 'Datenqualität',
+                        table: {
+                            headers: ['Status', 'Grenze'],
+                            rows: [
+                                ['EXCELLENT', '≥ 90 %'],
+                                ['GOOD', '≥ 75 %'],
+                                ['LIMITED', '≥ 50 %'],
+                                ['INSUFFICIENT', '< 50 % oder fachlich unzureichend']
+                            ]
+                        }
+                    }
+                ]
             }
         ])
     });
@@ -1391,7 +1581,61 @@ code{background:#1f1f1f;padding:2px 5px;border-radius:4px;}
         CYCLE_QUALITY: CONFIG.NPS_ROOT + '.CycleAnalyzer.Quality.Score',
         CYCLE_RATING: CONFIG.NPS_ROOT + '.CycleAnalyzer.Quality.Rating',
         CYCLE_WARNING: CONFIG.NPS_ROOT + '.CycleAnalyzer.Quality.Warning',
-        CYCLE_REPORT_JSON: CONFIG.NPS_ROOT + '.CycleAnalyzer.Report.Json'
+        CYCLE_REPORT_JSON: CONFIG.NPS_ROOT + '.CycleAnalyzer.Report.Json',
+
+        // HeatingOptimization / 15_NPS_HeatingCurveAnalyzer
+        HEATING_STATUS_ACTIVE: CONFIG.NPS_ROOT + '.HeatingOptimization.Status.Active',
+        HEATING_STATUS_VALID: CONFIG.NPS_ROOT + '.HeatingOptimization.Status.Valid',
+        HEATING_STATUS_LAST_CALCULATION: CONFIG.NPS_ROOT + '.HeatingOptimization.Status.LastCalculation',
+        HEATING_STATUS_SOURCE_CHECK_OK: CONFIG.NPS_ROOT + '.HeatingOptimization.Status.SourceCheckOk',
+        HEATING_STATUS_SOURCE_CHECK_JSON: CONFIG.NPS_ROOT + '.HeatingOptimization.Status.SourceCheckJson',
+        HEATING_STATUS_DATA_QUALITY_PERCENT: CONFIG.NPS_ROOT + '.HeatingOptimization.Status.DataQualityPercent',
+        HEATING_STATUS_DATA_QUALITY_STATE: CONFIG.NPS_ROOT + '.HeatingOptimization.Status.DataQualityState',
+
+        HEATING_CURRENT_OPERATING_PRIORITY: CONFIG.NPS_ROOT + '.HeatingOptimization.Current.OperatingPriority',
+        HEATING_CURRENT_OUTDOOR: CONFIG.NPS_ROOT + '.HeatingOptimization.Current.OutdoorTemperature',
+        HEATING_CURRENT_FLOW_TARGET: CONFIG.NPS_ROOT + '.HeatingOptimization.Current.FlowTarget',
+        HEATING_CURRENT_FLOW_ACTUAL: CONFIG.NPS_ROOT + '.HeatingOptimization.Current.FlowActual',
+        HEATING_CURRENT_SUPPLY_DEVIATION: CONFIG.NPS_ROOT + '.HeatingOptimization.Current.SupplyDeviation',
+        HEATING_CURRENT_RETURN: CONFIG.NPS_ROOT + '.HeatingOptimization.Current.ReturnTemperature',
+        HEATING_CURRENT_DELTA_T: CONFIG.NPS_ROOT + '.HeatingOptimization.Current.DeltaT',
+        HEATING_CURRENT_DEGREE_MINUTES: CONFIG.NPS_ROOT + '.HeatingOptimization.Current.DegreeMinutes',
+        HEATING_CURRENT_COMPRESSOR_ACTIVE: CONFIG.NPS_ROOT + '.HeatingOptimization.Current.CompressorActive',
+        HEATING_CURRENT_COMPRESSOR_FREQUENCY: CONFIG.NPS_ROOT + '.HeatingOptimization.Current.CompressorFrequency',
+        HEATING_CURRENT_VOLUME_FLOW: CONFIG.NPS_ROOT + '.HeatingOptimization.Current.VolumeFlow',
+        HEATING_CURRENT_ADDITIONAL_HEAT_ACTIVE: CONFIG.NPS_ROOT + '.HeatingOptimization.Current.AdditionalHeatActive',
+        HEATING_CURRENT_DEFROST_ACTIVE: CONFIG.NPS_ROOT + '.HeatingOptimization.Current.DefrostActive',
+        HEATING_CURRENT_SAMPLE_VALID: CONFIG.NPS_ROOT + '.HeatingOptimization.Current.SampleValid',
+        HEATING_CURRENT_SAMPLE_QUALITY: CONFIG.NPS_ROOT + '.HeatingOptimization.Current.SampleQuality',
+
+        HEATING_ROOMS_COUNT: CONFIG.NPS_ROOT + '.HeatingOptimization.Rooms.Count',
+        HEATING_ROOMS_ACTIVE_COUNT: CONFIG.NPS_ROOT + '.HeatingOptimization.Rooms.ActiveCount',
+        HEATING_ROOMS_DATA_VALID_COUNT: CONFIG.NPS_ROOT + '.HeatingOptimization.Rooms.DataValidCount',
+        HEATING_ROOMS_ANALYSIS_VALID_COUNT: CONFIG.NPS_ROOT + '.HeatingOptimization.Rooms.ValidForHeatingCurveCount',
+        HEATING_ROOMS_TOO_COLD_COUNT: CONFIG.NPS_ROOT + '.HeatingOptimization.Rooms.TooColdCount',
+        HEATING_ROOMS_OK_COUNT: CONFIG.NPS_ROOT + '.HeatingOptimization.Rooms.OKCount',
+        HEATING_ROOMS_TOO_WARM_COUNT: CONFIG.NPS_ROOT + '.HeatingOptimization.Rooms.TooWarmCount',
+        HEATING_ROOMS_AVERAGE_DEVIATION: CONFIG.NPS_ROOT + '.HeatingOptimization.Rooms.AverageDeviation',
+        HEATING_ROOMS_MEDIAN_DEVIATION: CONFIG.NPS_ROOT + '.HeatingOptimization.Rooms.MedianDeviation',
+        HEATING_ROOMS_STDDEV: CONFIG.NPS_ROOT + '.HeatingOptimization.Rooms.DeviationStdDev',
+        HEATING_ROOMS_RANGE: CONFIG.NPS_ROOT + '.HeatingOptimization.Rooms.DeviationRange',
+        HEATING_ROOMS_COLDEST: CONFIG.NPS_ROOT + '.HeatingOptimization.Rooms.ColdestRoom',
+        HEATING_ROOMS_COLDEST_DEVIATION: CONFIG.NPS_ROOT + '.HeatingOptimization.Rooms.ColdestRoomDeviation',
+        HEATING_ROOMS_WARMEST: CONFIG.NPS_ROOT + '.HeatingOptimization.Rooms.WarmestRoom',
+        HEATING_ROOMS_WARMEST_DEVIATION: CONFIG.NPS_ROOT + '.HeatingOptimization.Rooms.WarmestRoomDeviation',
+        HEATING_ROOMS_JSON: CONFIG.NPS_ROOT + '.HeatingOptimization.Rooms.Json',
+
+        HEATING_ANALYSIS_6H: CONFIG.NPS_ROOT + '.HeatingOptimization.Analysis.Window6h',
+        HEATING_ANALYSIS_24H: CONFIG.NPS_ROOT + '.HeatingOptimization.Analysis.Window24h',
+        HEATING_ANALYSIS_72H: CONFIG.NPS_ROOT + '.HeatingOptimization.Analysis.Window72h',
+        HEATING_ANALYSIS_7D: CONFIG.NPS_ROOT + '.HeatingOptimization.Analysis.Window7d',
+        HEATING_ANALYSIS_EVIDENCE_JSON: CONFIG.NPS_ROOT + '.HeatingOptimization.Analysis.EvidenceJson',
+        HEATING_ANALYSIS_CURRENT_CONFIG_HOURS: CONFIG.NPS_ROOT + '.HeatingOptimization.Analysis.CurrentConfigurationValidHeatingHours',
+
+        HEATING_AI_READY: CONFIG.NPS_ROOT + '.HeatingOptimization.AI.Ready',
+        HEATING_AI_GENERATED_AT: CONFIG.NPS_ROOT + '.HeatingOptimization.AI.GeneratedAt',
+
+        HEATING_CONFIG_ROOT: CONFIG.NPS_ROOT + '.HeatingOptimization.Configuration'
     });
 
     const STATISTICS_AREAS = Object.freeze([
@@ -1759,7 +2003,16 @@ code{background:#1f1f1f;padding:2px 5px;border-radius:4px;}
             ['Events', 'Ereignisse'],
             ['Events.Today', 'Ereignisse heute'],
             ['System', 'System'],
-            ['Help', 'Bedienungsanleitung']
+            ['Help', 'Bedienungsanleitung'],
+            ['HeatingOptimization', 'Heizungsoptimierung'],
+            ['HeatingOptimization.Status', 'Heizungsoptimierung Status'],
+            ['HeatingOptimization.Current', 'Heizungsoptimierung Anlagenstatus'],
+            ['HeatingOptimization.Rooms', 'Heizungsoptimierung Raumkomfort'],
+            ['HeatingOptimization.Analysis', 'Heizungsoptimierung Analyse 72 h'],
+            ['HeatingOptimization.Evidence', 'Heizungsoptimierung Analysehinweise'],
+            ['HeatingOptimization.DataQuality', 'Heizungsoptimierung Datenqualität'],
+            ['HeatingOptimization.Configuration', 'Heizungsoptimierung Konfiguration'],
+            ['HeatingOptimization.Tables', 'Heizungsoptimierung Tabellen']
         ].forEach(function (entry) {
             ensureChannel(entry[0], entry[1]);
         });
@@ -1986,6 +2239,116 @@ code{background:#1f1f1f;padding:2px 5px;border-radius:4px;}
         ensureNumber('System.TechnicalStateCode', 'Technischer Zustands-Code');
         ensureString('System.TechnicalMessage', 'Technische Zustandsmeldung');
 
+        // HeatingOptimization – Präsentationsschnittstelle für Modul 15
+        ensureBoolean('HeatingOptimization.Status.Active', 'Modul aktiv');
+        ensureBoolean('HeatingOptimization.Status.Valid', 'Modul gültig');
+        ensureNumber('HeatingOptimization.Status.DataQualityPercent', 'Datenqualität', '%', 'value');
+        ensureString('HeatingOptimization.Status.DataQualityState', 'Qualitätsstatus');
+        ensureBoolean('HeatingOptimization.Status.AnalysisReady', 'Analyse bereit');
+        ensureString('HeatingOptimization.Status.LastUpdate', 'Dashboard-Aufbereitung zuletzt', 'date');
+        ensureString('HeatingOptimization.Status.SourceTimestamp', 'Analyzer zuletzt berechnet', 'date');
+
+        ensureNumber('HeatingOptimization.Current.OperatingPriority', 'Betriebspriorität');
+        ensureString('HeatingOptimization.Current.OperatingModeText', 'Betriebsart');
+        ensureNumber('HeatingOptimization.Current.OutdoorTemperature', 'Außentemperatur', '°C', 'value.temperature');
+        ensureNumber('HeatingOptimization.Current.FlowTarget', 'Vorlauf SOLL', '°C', 'value.temperature');
+        ensureNumber('HeatingOptimization.Current.FlowActual', 'Vorlauf IST', '°C', 'value.temperature');
+        ensureNumber('HeatingOptimization.Current.SupplyDeviation', 'Vorlaufabweichung', 'K', 'value');
+        ensureNumber('HeatingOptimization.Current.ReturnTemperature', 'Rücklauf', '°C', 'value.temperature');
+        ensureNumber('HeatingOptimization.Current.DeltaT', 'Delta-T', 'K', 'value');
+        ensureNumber('HeatingOptimization.Current.DegreeMinutes', 'Gradminuten', 'GM', 'value');
+        ensureBoolean('HeatingOptimization.Current.CompressorActive', 'Verdichter');
+        ensureNumber('HeatingOptimization.Current.CompressorFrequency', 'Verdichterfrequenz', 'Hz', 'value.frequency');
+        ensureNumber('HeatingOptimization.Current.VolumeFlow', 'Volumenstrom', 'l/min', 'value.flow');
+        ensureBoolean('HeatingOptimization.Current.AdditionalHeatActive', 'Zusatzheizung');
+        ensureBoolean('HeatingOptimization.Current.DefrostActive', 'Enteisung');
+        ensureBoolean('HeatingOptimization.Current.SampleValid', 'Analysesample');
+        ensureNumber('HeatingOptimization.Current.SampleQuality', 'Samplequalität', '%', 'value');
+
+        ensureNumber('HeatingOptimization.Rooms.Count', 'Räume gesamt');
+        ensureNumber('HeatingOptimization.Rooms.ActiveCount', 'Räume aktiv');
+        ensureNumber('HeatingOptimization.Rooms.DataValidCount', 'Daten gültig');
+        ensureNumber('HeatingOptimization.Rooms.ValidForHeatingCurveCount', 'Für Heizkurve verwertbar');
+        ensureNumber('HeatingOptimization.Rooms.TooColdCount', 'Zu kalt');
+        ensureNumber('HeatingOptimization.Rooms.OKCount', 'Komfortbereich');
+        ensureNumber('HeatingOptimization.Rooms.TooWarmCount', 'Zu warm');
+        ensureNumber('HeatingOptimization.Rooms.AverageDeviation', 'Ø Raumabweichung', 'K', 'value');
+        ensureNumber('HeatingOptimization.Rooms.MedianDeviation', 'Median Raumabweichung', 'K', 'value');
+        ensureNumber('HeatingOptimization.Rooms.DeviationStdDev', 'Streuung', 'K', 'value');
+        ensureNumber('HeatingOptimization.Rooms.DeviationRange', 'Spannweite', 'K', 'value');
+        ensureString('HeatingOptimization.Rooms.ColdestRoom', 'Kältester Raum');
+        ensureNumber('HeatingOptimization.Rooms.ColdestRoomDeviation', 'Abweichung kältester Raum', 'K', 'value');
+        ensureString('HeatingOptimization.Rooms.WarmestRoom', 'Wärmster Raum');
+        ensureNumber('HeatingOptimization.Rooms.WarmestRoomDeviation', 'Abweichung wärmster Raum', 'K', 'value');
+
+        ensureBoolean('HeatingOptimization.Analysis.Valid', 'Analyse gültig');
+        ensureNumber('HeatingOptimization.Analysis.ValidHeatingHours', 'Gültige Heizstunden', 'h', 'value.interval');
+        ensureNumber('HeatingOptimization.Analysis.DataQualityPercent', 'Datenqualität 72 h', '%', 'value');
+        ensureNumber('HeatingOptimization.Analysis.AvgOutdoorTemperature', 'Außentemperatur Ø', '°C', 'value.temperature');
+        ensureNumber('HeatingOptimization.Analysis.AvgFlowTarget', 'Vorlauf SOLL Ø', '°C', 'value.temperature');
+        ensureNumber('HeatingOptimization.Analysis.AvgFlowActual', 'Vorlauf IST Ø', '°C', 'value.temperature');
+        ensureNumber('HeatingOptimization.Analysis.AvgFlowDeviation', 'Vorlaufabweichung Ø', 'K', 'value');
+        ensureNumber('HeatingOptimization.Analysis.AvgRoomDeviation', 'Raumabweichung Ø', 'K', 'value');
+        ensureNumber('HeatingOptimization.Analysis.MedianRoomDeviation', 'Raumabweichung Median', 'K', 'value');
+        ensureNumber('HeatingOptimization.Analysis.TooColdRatio', 'Zu kalt', '%', 'value');
+        ensureNumber('HeatingOptimization.Analysis.OKRatio', 'Komfortbereich', '%', 'value');
+        ensureNumber('HeatingOptimization.Analysis.TooWarmRatio', 'Zu warm', '%', 'value');
+        ensureNumber('HeatingOptimization.Analysis.CompressorRuntimePercent', 'Verdichterlaufzeit', '%', 'value');
+        ensureNumber('HeatingOptimization.Analysis.AdditionalHeatRuntimePercent', 'Zusatzheizung', '%', 'value');
+
+        ensureString('HeatingOptimization.Evidence.GlobalTemperatureState', 'Gesamttemperatur');
+        ensureString('HeatingOptimization.Evidence.FlowTrackingState', 'Vorlauf-Nachführung');
+        ensureString('HeatingOptimization.Evidence.OutdoorDependenceState', 'Außentemperaturabhängigkeit');
+        ensureBoolean('HeatingOptimization.Evidence.RoomImbalance', 'Raumungleichgewicht');
+        ensureBoolean('HeatingOptimization.Evidence.AdditionalHeatInfluence', 'Einfluss Zusatzheizung');
+        ensureBoolean('HeatingOptimization.Evidence.SensorMismatch', 'Außensensoren auffällig');
+        ensureBoolean('HeatingOptimization.Evidence.InsufficientData', 'Datenbasis unzureichend');
+
+        ensureBoolean('HeatingOptimization.DataQuality.SourceCheckOk', 'Quellenprüfung');
+        ensureNumber('HeatingOptimization.DataQuality.RequiredTotal', 'Pflichtquellen gesamt');
+        ensureNumber('HeatingOptimization.DataQuality.RequiredOk', 'Pflichtquellen OK');
+        ensureString('HeatingOptimization.DataQuality.RequiredMissing', 'Fehlende Pflichtquellen');
+        ensureNumber('HeatingOptimization.DataQuality.OptionalTotal', 'Optionale Quellen gesamt');
+        ensureNumber('HeatingOptimization.DataQuality.OptionalOk', 'Optionale Quellen OK');
+        ensureString('HeatingOptimization.DataQuality.OptionalMissing', 'Fehlende optionale Quellen');
+        ensureNumber('HeatingOptimization.DataQuality.RoomSourcesConfigured', 'Raumquellen konfiguriert');
+        ensureNumber('HeatingOptimization.DataQuality.RoomSourcesValid', 'Raumquellen gültig');
+        ensureNumber('HeatingOptimization.DataQuality.Percent', 'Globale Datenqualität', '%', 'value');
+        ensureString('HeatingOptimization.DataQuality.State', 'Qualitätsstatus');
+        ensureNumber('HeatingOptimization.DataQuality.SampleQuality', 'Samplequalität', '%', 'value');
+        ensureBoolean('HeatingOptimization.DataQuality.SampleValid', 'Aktueller Messpunkt gültig');
+        ensureNumber('HeatingOptimization.DataQuality.ValidHeatingHours', 'Gültige Heizstunden aktuelle Konfiguration', 'h', 'value.interval');
+        ensureBoolean('HeatingOptimization.DataQuality.AnalysisReady', 'Analyse bereit');
+
+        ensureNumber('HeatingOptimization.Configuration.HeatingCurve', 'Heizkurve');
+        ensureNumber('HeatingOptimization.Configuration.HeatingCurveOffset', 'Heizkurvenverschiebung');
+        ensureNumber('HeatingOptimization.Configuration.FlowMin', 'Vorlauf Minimum', '°C', 'value.temperature');
+        ensureNumber('HeatingOptimization.Configuration.FlowMax', 'Vorlauf Maximum', '°C', 'value.temperature');
+        ensureNumber('HeatingOptimization.Configuration.HeatingStartUndertemp', 'Heizungsstart-Untertemperatur', '°C', 'value.temperature');
+        ensureNumber('HeatingOptimization.Configuration.HeatingStopTemperature', 'Heizungs-Stopp', '°C', 'value.temperature');
+        ensureNumber('HeatingOptimization.Configuration.AdditionalHeatStopTemperature', 'Zusatzheizung-Stopp', '°C', 'value.temperature');
+        ensureNumber('HeatingOptimization.Configuration.AutoFilterTime', 'Automatik-Filterzeit', 'h', 'value.interval');
+        ensureNumber('HeatingOptimization.Configuration.MaxFlowDifferenceCompressor', 'Max. VL-Differenz Verdichter', 'K', 'value');
+        ensureNumber('HeatingOptimization.Configuration.OperatingMode', 'Betriebsmodus');
+        ensureString('HeatingOptimization.Configuration.OperatingModeText', 'Betriebsmodus Anzeige');
+        ensureBoolean('HeatingOptimization.Configuration.HeatingAutomatic', 'Heizung Automatik');
+        ensureString('HeatingOptimization.Configuration.ChangedAt', 'Aktuelle Konfiguration seit', 'date');
+        [1,2,3,4,5,6,7].forEach(function (point) {
+            ensureNumber(
+                'HeatingOptimization.Configuration.CustomCurveP' + point,
+                'Eigene Heizkurve P' + point,
+                '°C',
+                'value.temperature'
+            );
+        });
+        ensureNumber('HeatingOptimization.Configuration.PointOutdoorTemperature', 'Punktverschiebung Außentemperatur', '°C', 'value.temperature');
+        ensureNumber('HeatingOptimization.Configuration.PointOffset', 'Punktverschiebung', 'K', 'value');
+
+        ensureString('HeatingOptimization.Tables.RoomsJson', 'Raumübersicht', 'json');
+        ensureString('HeatingOptimization.Tables.AnalysisWindowsJson', 'Analysefenster', 'json');
+        ensureString('HeatingOptimization.Tables.EvidenceJson', 'Analysehinweise', 'json');
+        ensureString('HeatingOptimization.Tables.DataQualityJson', 'Datenqualität / Quellenprüfung', 'json');
+
         // Help: zentrale HTML-Bedienhilfen und PDF-Metadaten
         ensureString('Help.Manifest', 'Bedienhilfe – Kapitelmanifest', 'json');
         ensureString('Help.DocumentationVersion', 'Bedienhilfe – Dokumentationsversion');
@@ -1998,6 +2361,7 @@ code{background:#1f1f1f;padding:2px 5px;border-radius:4px;}
         ensureString('Help.Cycles', 'Bedienhilfe – Zyklus', 'html');
         ensureString('Help.Events', 'Bedienhilfe – Ereignisse', 'html');
         ensureString('Help.Defrost', 'Bedienhilfe – Enteisung', 'html');
+        ensureString('Help.HeatingOptimization', 'Bedienhilfe – Heizungsanalyse', 'html');
         ensureString('System.Ruecksprung', 'Rücksprung');
     }
 
@@ -3471,6 +3835,646 @@ code{background:#1f1f1f;padding:2px 5px;border-radius:4px;}
         return round(cop, 1);
     }
 
+    // ============================================================
+    // HeatingOptimization / Modul 15 – reine Präsentationsprojektion
+    // ============================================================
+    function heatingSource(path) {
+        return CONFIG.NPS_ROOT + '.HeatingOptimization.' + path;
+    }
+
+    function mapHeatingOperatingPriority(value) {
+        const number = Number(value);
+        if (number === 10) return 'Standby';
+        if (number === 20) return 'Warmwasser';
+        if (number === 30) return 'Heizen';
+        if (number === 40) return 'Pool';
+        if (number === 50 || number === 60) return 'Kühlung';
+        return 'Unbekannt';
+    }
+
+    function mapHeatingConfigurationOperatingMode(value) {
+        if (value === null || value === undefined || value === '') return 'Unbekannt';
+        return String(value);
+    }
+
+    function parseHeatingJsonSource(sourceId, label) {
+        const raw = readRaw(sourceId);
+
+        if (raw === null || raw === undefined || raw === '') {
+            return { ok: false, value: null, error: 'EMPTY' };
+        }
+
+        if (typeof raw === 'object') {
+            return { ok: true, value: raw, error: '' };
+        }
+
+        try {
+            return { ok: true, value: JSON.parse(String(raw)), error: '' };
+        } catch (error) {
+            warn(
+                'HeatingOptimization: ungültiges JSON in ' +
+                label + ' | ' + (error && error.message ? error.message : error)
+            );
+            return { ok: false, value: null, error: 'INVALID_JSON' };
+        }
+    }
+
+    function heatingMissingText(items) {
+        if (!Array.isArray(items) || items.length === 0) return 'Keine';
+
+        return items.map(function (item) {
+            if (!item || typeof item !== 'object') return String(item || '');
+            const room = item.room ? String(item.room) + ': ' : '';
+            const name = item.name ? String(item.name) : 'Unbekannt';
+            return room + name;
+        }).filter(function (value) {
+            return value !== '';
+        }).join(' · ') || 'Keine';
+    }
+
+    function heatingExcludeReasonText(reasons) {
+        if (!Array.isArray(reasons) || reasons.length === 0) return '';
+
+        const labels = {
+            ROOM_INACTIVE: 'Raum inaktiv',
+            NO_ACTUAL_TEMPERATURE: 'Temperatur fehlt',
+            INVALID_ACTUAL_TEMPERATURE: 'Temperatur ungültig',
+            NO_SCHEDULE_TARGET: 'Solltemperatur fehlt',
+            INVALID_SCHEDULE_TARGET: 'Solltemperatur ungültig',
+            HEATING_PERIOD_INACTIVE: 'Heizperiode inaktiv',
+            MAINTENANCE: 'Maintenance',
+            WINDOW_OPEN: 'Fenster offen',
+            OVERRIDE_ACTIVE: 'Override aktiv'
+        };
+
+        return reasons.map(function (reason) {
+            return labels[reason] || String(reason);
+        }).join(' · ');
+    }
+
+    function heatingTableNumber(value, digits) {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return null;
+        return round(number, digits);
+    }
+
+    function heatingFormatNumber(value, digits, unit) {
+        const number = Number(value);
+        if (!Number.isFinite(number)) return '–';
+        const formatted = round(number, digits).toFixed(digits).replace('.', ',');
+        return formatted + (unit ? ' ' + unit : '');
+    }
+
+    function buildHeatingRoomsTable(roomsResult) {
+        if (!roomsResult.ok || !roomsResult.value || !Array.isArray(roomsResult.value.details)) {
+            return [];
+        }
+
+        return roomsResult.value.details.map(function (room) {
+            return {
+                room: room && room.name ? String(room.name) : '',
+                actual: heatingTableNumber(room ? room.actualTemperature : null, 1),
+                target: heatingTableNumber(room ? room.scheduleTarget : null, 1),
+                deviation: heatingTableNumber(room ? room.deviation : null, 1),
+                comfort: room && room.comfortState ? String(room.comfortState) : '',
+                valid: !!(room && room.validForHeatingCurve === true),
+                reason: heatingExcludeReasonText(room ? room.excludeReasons : [])
+            };
+        });
+    }
+
+    function readHeatingWindow(windowName) {
+        const root = heatingSource('Analysis.' + windowName + '.');
+
+        return {
+            valid: readBoolean(root + 'Valid') === true,
+            validHeatingHours: readNumber(root + 'ValidHeatingHours', 1),
+            dataQualityPercent: readNumber(root + 'DataQualityPercent', 1),
+            avgOutdoorTemperature: readNumber(root + 'AvgOutdoorTemperature', 1),
+            avgFlowTarget: readNumber(root + 'AvgFlowTarget', 1),
+            avgFlowActual: readNumber(root + 'AvgFlowActual', 1),
+            avgFlowDeviation: readNumber(root + 'AvgFlowDeviation', 1),
+            avgRoomDeviation: readNumber(root + 'AvgRoomDeviation', 1),
+            medianRoomDeviation: readNumber(root + 'MedianRoomDeviation', 1),
+            tooColdRatio: readNumber(root + 'TooColdRatio', 1),
+            okRatio: readNumber(root + 'OKRatio', 1),
+            tooWarmRatio: readNumber(root + 'TooWarmRatio', 1),
+            compressorRuntimePercent: readNumber(root + 'CompressorRuntimePercent', 1),
+            additionalHeatRuntimePercent: readNumber(root + 'AdditionalHeatRuntimePercent', 1)
+        };
+    }
+
+    function buildHeatingAnalysisWindowsTable(windows) {
+        const definitions = [
+            ['6 h', 'Window6h'],
+            ['24 h', 'Window24h'],
+            ['72 h', 'Window72h'],
+            ['7 Tage', 'Window7d']
+        ];
+
+        return definitions.map(function (definition) {
+            const label = definition[0];
+            const key = definition[1];
+            const value = windows[key];
+
+            return {
+                window: label,
+                valid: value.valid === true,
+                heatingHours: value.validHeatingHours,
+                dataQuality: value.dataQualityPercent,
+                status:
+                    value.valid === true
+                        ? (key === 'Window72h' ? 'Hauptanalyse' : 'Bereit')
+                        : 'Nicht ausreichend'
+            };
+        });
+    }
+
+    function mapHeatingGlobalTemperatureState(evidence) {
+        if (!evidence || evidence.insufficientData === true) {
+            return 'Keine belastbare Aussage';
+        }
+
+        if (evidence.globalTooCold && evidence.globalTooCold.value === true) {
+            return 'Haus überwiegend zu kalt';
+        }
+
+        if (evidence.globalTooWarm && evidence.globalTooWarm.value === true) {
+            return 'Haus überwiegend zu warm';
+        }
+
+        return 'OK';
+    }
+
+    function mapHeatingFlowTrackingState(evidence) {
+        if (!evidence || evidence.insufficientData === true) {
+            return 'Keine belastbare Aussage';
+        }
+
+        const flow = evidence.flowTrackingProblem || {};
+        if (flow.value !== true) return 'OK';
+        if (flow.direction === 'LOW') return 'Vorlauf dauerhaft unter Soll';
+        if (flow.direction === 'HIGH') return 'Vorlauf dauerhaft über Soll';
+        return 'Auffällig';
+    }
+
+    function mapHeatingOutdoorDependenceState(evidence) {
+        if (!evidence || evidence.insufficientData === true) {
+            return 'Keine belastbare Aussage';
+        }
+
+        const outdoor = evidence.outdoorDependentDeviation || {};
+        if (outdoor.value !== true) return 'Nicht erkannt';
+
+        if (outdoor.direction === 'COLDER_OUTSIDE_MORE_NEGATIVE') {
+            return 'Bei kälterer Außenluft zunehmend zu kalt';
+        }
+
+        if (outdoor.direction === 'COLDER_OUTSIDE_MORE_POSITIVE') {
+            return 'Bei kälterer Außenluft zunehmend zu warm';
+        }
+
+        return 'Erkannt';
+    }
+
+    function evidenceConfidence(item) {
+        if (!item || typeof item !== 'object') return null;
+        const value = Number(item.confidence);
+        return Number.isFinite(value) ? round(value, 1) : null;
+    }
+
+    function buildHeatingEvidenceTable(evidenceResult) {
+        if (!evidenceResult.ok || !evidenceResult.value) return [];
+
+        const evidence = evidenceResult.value;
+        const insufficient = evidence.insufficientData === true;
+
+        const outdoor = evidence.outdoorDependentDeviation || {};
+        const flow = evidence.flowTrackingProblem || {};
+        const sensor = evidence.sensorMismatch || {};
+
+        return [
+            {
+                analysis: 'Gesamtes Haus zu kalt',
+                active: !!(evidence.globalTooCold && evidence.globalTooCold.value === true),
+                confidence: evidenceConfidence(evidence.globalTooCold),
+                status: insufficient
+                    ? 'Keine belastbare Aussage'
+                    : (evidence.globalTooCold && evidence.globalTooCold.value === true ? 'Erkannt' : 'Nein')
+            },
+            {
+                analysis: 'Gesamtes Haus zu warm',
+                active: !!(evidence.globalTooWarm && evidence.globalTooWarm.value === true),
+                confidence: evidenceConfidence(evidence.globalTooWarm),
+                status: insufficient
+                    ? 'Keine belastbare Aussage'
+                    : (evidence.globalTooWarm && evidence.globalTooWarm.value === true ? 'Erkannt' : 'Nein')
+            },
+            {
+                analysis: 'Außentemperaturabhängigkeit',
+                active: outdoor.value === true,
+                confidence: evidenceConfidence(outdoor),
+                status: mapHeatingOutdoorDependenceState(evidence)
+            },
+            {
+                analysis: 'Raumungleichgewicht',
+                active: !!(evidence.roomImbalance && evidence.roomImbalance.value === true),
+                confidence: evidenceConfidence(evidence.roomImbalance),
+                status: insufficient
+                    ? 'Keine belastbare Aussage'
+                    : (evidence.roomImbalance && evidence.roomImbalance.value === true ? 'Erkannt' : 'Nein')
+            },
+            {
+                analysis: 'Vorlauf-Nachführung',
+                active: flow.value === true,
+                confidence: evidenceConfidence(flow),
+                status: mapHeatingFlowTrackingState(evidence)
+            },
+            {
+                analysis: 'Einfluss Zusatzheizung',
+                active: evidence.additionalHeatInfluence === true,
+                confidence: null,
+                status: insufficient
+                    ? 'Keine belastbare Aussage'
+                    : (evidence.additionalHeatInfluence === true ? 'Ja' : 'Nein')
+            },
+            {
+                analysis: 'Außensensoren auffällig',
+                active: sensor.value === true,
+                confidence: null,
+                status: sensor.value === true ? 'Auffällig' : 'Nein'
+            },
+            {
+                analysis: 'Datenbasis unzureichend',
+                active: insufficient,
+                confidence: null,
+                status: insufficient ? 'Ja' : 'Nein'
+            }
+        ];
+    }
+
+    function buildHeatingDataQualityTable(data) {
+        return [
+            {
+                criterion: 'Pflichtquellen',
+                value: data.requiredOk + ' / ' + data.requiredTotal,
+                status: data.requiredOk === data.requiredTotal ? 'OK' : 'FEHLER',
+                details: data.requiredMissing
+            },
+            {
+                criterion: 'Optionale Quellen',
+                value: data.optionalOk + ' / ' + data.optionalTotal,
+                status: data.optionalOk === data.optionalTotal ? 'OK' : 'Hinweis',
+                details: data.optionalMissing
+            },
+            {
+                criterion: 'Raumquellen',
+                value: data.roomSourcesValid + ' / ' + data.roomSourcesConfigured,
+                status: data.roomSourcesValid === data.roomSourcesConfigured ? 'OK' : 'Hinweis',
+                details: ''
+            },
+            {
+                criterion: 'Aktuelles Sample',
+                value: data.sampleValid ? 'Ja' : 'Nein',
+                status: data.sampleValid ? 'Gültig' : 'Nicht verwertbar',
+                details: ''
+            },
+            {
+                criterion: 'Samplequalität',
+                value: heatingFormatNumber(data.sampleQuality, 0, '%'),
+                status: data.sampleValid ? 'OK' : 'Nicht verwertbar',
+                details: ''
+            },
+            {
+                criterion: 'Globale Datenqualität',
+                value: heatingFormatNumber(data.percent, 0, '%'),
+                status: data.state || 'INSUFFICIENT',
+                details: ''
+            },
+            {
+                criterion: 'Gültige Heizstunden',
+                value: heatingFormatNumber(data.validHeatingHours, 1, 'h'),
+                status: Number.isFinite(data.validHeatingHours) && data.validHeatingHours >= 8
+                    ? 'OK'
+                    : 'Noch nicht ausreichend',
+                details: ''
+            },
+            {
+                criterion: 'Analyse bereit',
+                value: data.analysisReady ? 'Ja' : 'Nein',
+                status: data.analysisReady ? 'READY' : 'NOT READY',
+                details: ''
+            }
+        ];
+    }
+
+    function collectHeatingOptimization() {
+        const roomsResult = parseHeatingJsonSource(
+            SOURCE.HEATING_ROOMS_JSON,
+            'Rooms.Json'
+        );
+
+        const evidenceResult = parseHeatingJsonSource(
+            SOURCE.HEATING_ANALYSIS_EVIDENCE_JSON,
+            'Analysis.EvidenceJson'
+        );
+
+        const sourceCheckResult = parseHeatingJsonSource(
+            SOURCE.HEATING_STATUS_SOURCE_CHECK_JSON,
+            'Status.SourceCheckJson'
+        );
+
+        const windows = {
+            Window6h: readHeatingWindow('Window6h'),
+            Window24h: readHeatingWindow('Window24h'),
+            Window72h: readHeatingWindow('Window72h'),
+            Window7d: readHeatingWindow('Window7d')
+        };
+
+        const sourceCheck = sourceCheckResult.ok && sourceCheckResult.value
+            ? sourceCheckResult.value
+            : {};
+
+        const required = sourceCheck.required || {};
+        const optional = sourceCheck.optional || {};
+        const sourceRooms = sourceCheck.rooms || {};
+
+        const dataQuality = {
+            sourceCheckOk: readBoolean(SOURCE.HEATING_STATUS_SOURCE_CHECK_OK) === true,
+            requiredTotal: Number.isFinite(Number(required.total)) ? Number(required.total) : 0,
+            requiredOk: Number.isFinite(Number(required.ok)) ? Number(required.ok) : 0,
+            requiredMissing: heatingMissingText(required.missing),
+            optionalTotal: Number.isFinite(Number(optional.total)) ? Number(optional.total) : 0,
+            optionalOk: Number.isFinite(Number(optional.ok)) ? Number(optional.ok) : 0,
+            optionalMissing: heatingMissingText(optional.missing),
+            roomSourcesConfigured: Number.isFinite(Number(sourceRooms.configured))
+                ? Number(sourceRooms.configured)
+                : 0,
+            roomSourcesValid: Number.isFinite(Number(sourceRooms.valid))
+                ? Number(sourceRooms.valid)
+                : 0,
+            percent: readNumber(SOURCE.HEATING_STATUS_DATA_QUALITY_PERCENT, 1),
+            state: readText(SOURCE.HEATING_STATUS_DATA_QUALITY_STATE, 'INSUFFICIENT'),
+            sampleQuality: readNumber(SOURCE.HEATING_CURRENT_SAMPLE_QUALITY, 1),
+            sampleValid: readBoolean(SOURCE.HEATING_CURRENT_SAMPLE_VALID) === true,
+            validHeatingHours: readNumber(SOURCE.HEATING_ANALYSIS_CURRENT_CONFIG_HOURS, 1),
+            analysisReady: readBoolean(SOURCE.HEATING_AI_READY) === true
+        };
+
+        const evidence = evidenceResult.ok && evidenceResult.value
+            ? evidenceResult.value
+            : null;
+
+        const configuration = {
+            heatingCurve: readNumber(heatingSource('Configuration.HeatingCurve')),
+            heatingCurveOffset: readNumber(heatingSource('Configuration.HeatingCurveOffset')),
+            flowMin: readNumber(heatingSource('Configuration.FlowMin'), 1),
+            flowMax: readNumber(heatingSource('Configuration.FlowMax'), 1),
+            heatingStartUndertemp: readNumber(heatingSource('Configuration.HeatingStartUndertemp'), 1),
+            heatingStopTemperature: readNumber(heatingSource('Configuration.HeatingStopTemperature'), 1),
+            additionalHeatStopTemperature: readNumber(heatingSource('Configuration.AdditionalHeatStopTemperature'), 1),
+            autoFilterTime: readNumber(heatingSource('Configuration.AutoFilterTime'), 1),
+            maxFlowDifferenceCompressor: readNumber(heatingSource('Configuration.MaxFlowDifferenceCompressor'), 1),
+            operatingMode: readNumber(heatingSource('Configuration.OperatingMode')),
+            heatingAutomatic: readBoolean(heatingSource('Configuration.HeatingAutomatic')),
+            changedAt: localIso(readText(heatingSource('Configuration.ChangedAt'), '')),
+            pointOutdoorTemperature: readNumber(heatingSource('Configuration.PointOutdoorTemperature'), 1),
+            pointOffset: readNumber(heatingSource('Configuration.PointOffset'), 1),
+            customCurve: [1,2,3,4,5,6,7].map(function (point) {
+                return readNumber(heatingSource('Configuration.CustomCurveP' + point), 1);
+            })
+        };
+
+        return {
+            status: {
+                active: readBoolean(SOURCE.HEATING_STATUS_ACTIVE) === true,
+                valid: readBoolean(SOURCE.HEATING_STATUS_VALID) === true,
+                dataQualityPercent: readNumber(SOURCE.HEATING_STATUS_DATA_QUALITY_PERCENT, 1),
+                dataQualityState: readText(SOURCE.HEATING_STATUS_DATA_QUALITY_STATE, 'INSUFFICIENT'),
+                analysisReady: readBoolean(SOURCE.HEATING_AI_READY) === true,
+                sourceTimestamp: localIso(readText(SOURCE.HEATING_STATUS_LAST_CALCULATION, ''))
+            },
+            current: {
+                operatingPriority: readNumber(SOURCE.HEATING_CURRENT_OPERATING_PRIORITY, 0),
+                outdoorTemperature: readNumber(SOURCE.HEATING_CURRENT_OUTDOOR, 1),
+                flowTarget: readNumber(SOURCE.HEATING_CURRENT_FLOW_TARGET, 1),
+                flowActual: readNumber(SOURCE.HEATING_CURRENT_FLOW_ACTUAL, 1),
+                supplyDeviation: readNumber(SOURCE.HEATING_CURRENT_SUPPLY_DEVIATION, 1),
+                returnTemperature: readNumber(SOURCE.HEATING_CURRENT_RETURN, 1),
+                deltaT: readNumber(SOURCE.HEATING_CURRENT_DELTA_T, 1),
+                degreeMinutes: readNumber(SOURCE.HEATING_CURRENT_DEGREE_MINUTES, 0),
+                compressorActive: readBoolean(SOURCE.HEATING_CURRENT_COMPRESSOR_ACTIVE) === true,
+                compressorFrequency: readNumber(SOURCE.HEATING_CURRENT_COMPRESSOR_FREQUENCY, 1),
+                volumeFlow: readNumber(SOURCE.HEATING_CURRENT_VOLUME_FLOW, 1),
+                additionalHeatActive: readBoolean(SOURCE.HEATING_CURRENT_ADDITIONAL_HEAT_ACTIVE) === true,
+                defrostActive: readBoolean(SOURCE.HEATING_CURRENT_DEFROST_ACTIVE) === true,
+                sampleValid: readBoolean(SOURCE.HEATING_CURRENT_SAMPLE_VALID) === true,
+                sampleQuality: readNumber(SOURCE.HEATING_CURRENT_SAMPLE_QUALITY, 1)
+            },
+            rooms: {
+                count: readNumber(SOURCE.HEATING_ROOMS_COUNT, 0),
+                activeCount: readNumber(SOURCE.HEATING_ROOMS_ACTIVE_COUNT, 0),
+                dataValidCount: readNumber(SOURCE.HEATING_ROOMS_DATA_VALID_COUNT, 0),
+                validForHeatingCurveCount: readNumber(SOURCE.HEATING_ROOMS_ANALYSIS_VALID_COUNT, 0),
+                tooColdCount: readNumber(SOURCE.HEATING_ROOMS_TOO_COLD_COUNT, 0),
+                okCount: readNumber(SOURCE.HEATING_ROOMS_OK_COUNT, 0),
+                tooWarmCount: readNumber(SOURCE.HEATING_ROOMS_TOO_WARM_COUNT, 0),
+                averageDeviation: readNumber(SOURCE.HEATING_ROOMS_AVERAGE_DEVIATION, 1),
+                medianDeviation: readNumber(SOURCE.HEATING_ROOMS_MEDIAN_DEVIATION, 1),
+                deviationStdDev: readNumber(SOURCE.HEATING_ROOMS_STDDEV, 1),
+                deviationRange: readNumber(SOURCE.HEATING_ROOMS_RANGE, 1),
+                coldestRoom: readText(SOURCE.HEATING_ROOMS_COLDEST, ''),
+                coldestRoomDeviation: readNumber(SOURCE.HEATING_ROOMS_COLDEST_DEVIATION, 1),
+                warmestRoom: readText(SOURCE.HEATING_ROOMS_WARMEST, ''),
+                warmestRoomDeviation: readNumber(SOURCE.HEATING_ROOMS_WARMEST_DEVIATION, 1)
+            },
+            analysis: windows.Window72h,
+            evidence: {
+                globalTemperatureState: mapHeatingGlobalTemperatureState(evidence),
+                flowTrackingState: mapHeatingFlowTrackingState(evidence),
+                outdoorDependenceState: mapHeatingOutdoorDependenceState(evidence),
+                roomImbalance: !!(evidence && evidence.roomImbalance && evidence.roomImbalance.value === true),
+                additionalHeatInfluence: !!(evidence && evidence.additionalHeatInfluence === true),
+                sensorMismatch: !!(evidence && evidence.sensorMismatch && evidence.sensorMismatch.value === true),
+                insufficientData: !evidence || evidence.insufficientData === true
+            },
+            dataQuality: dataQuality,
+            configuration: configuration,
+            tables: {
+                rooms: JSON.stringify(buildHeatingRoomsTable(roomsResult)),
+                analysisWindows: JSON.stringify(buildHeatingAnalysisWindowsTable(windows)),
+                evidence: JSON.stringify(buildHeatingEvidenceTable(evidenceResult)),
+                dataQuality: JSON.stringify(buildHeatingDataQualityTable(dataQuality))
+            }
+        };
+    }
+
+    function publishHeatingOptimization(heating) {
+        writeMapped('HeatingOptimization.Status', {
+            active: heating.status.active,
+            valid: heating.status.valid,
+            dataQualityPercent: heating.status.dataQualityPercent,
+            dataQualityState: heating.status.dataQualityState,
+            analysisReady: heating.status.analysisReady,
+            lastUpdate: localIso(),
+            sourceTimestamp: heating.status.sourceTimestamp
+        }, {
+            active: 'Active',
+            valid: 'Valid',
+            dataQualityPercent: 'DataQualityPercent',
+            dataQualityState: 'DataQualityState',
+            analysisReady: 'AnalysisReady',
+            lastUpdate: 'LastUpdate',
+            sourceTimestamp: 'SourceTimestamp'
+        });
+
+        writeMapped('HeatingOptimization.Current', {
+            operatingPriority: heating.current.operatingPriority,
+            operatingModeText: mapHeatingOperatingPriority(heating.current.operatingPriority),
+            outdoorTemperature: heating.current.outdoorTemperature,
+            flowTarget: heating.current.flowTarget,
+            flowActual: heating.current.flowActual,
+            supplyDeviation: heating.current.supplyDeviation,
+            returnTemperature: heating.current.returnTemperature,
+            deltaT: heating.current.deltaT,
+            degreeMinutes: heating.current.degreeMinutes,
+            compressorActive: heating.current.compressorActive,
+            compressorFrequency: heating.current.compressorFrequency,
+            volumeFlow: heating.current.volumeFlow,
+            additionalHeatActive: heating.current.additionalHeatActive,
+            defrostActive: heating.current.defrostActive,
+            sampleValid: heating.current.sampleValid,
+            sampleQuality: heating.current.sampleQuality
+        }, {
+            operatingPriority: 'OperatingPriority',
+            operatingModeText: 'OperatingModeText',
+            outdoorTemperature: 'OutdoorTemperature',
+            flowTarget: 'FlowTarget',
+            flowActual: 'FlowActual',
+            supplyDeviation: 'SupplyDeviation',
+            returnTemperature: 'ReturnTemperature',
+            deltaT: 'DeltaT',
+            degreeMinutes: 'DegreeMinutes',
+            compressorActive: 'CompressorActive',
+            compressorFrequency: 'CompressorFrequency',
+            volumeFlow: 'VolumeFlow',
+            additionalHeatActive: 'AdditionalHeatActive',
+            defrostActive: 'DefrostActive',
+            sampleValid: 'SampleValid',
+            sampleQuality: 'SampleQuality'
+        });
+
+        writeMapped('HeatingOptimization.Rooms', heating.rooms, {
+            count: 'Count',
+            activeCount: 'ActiveCount',
+            dataValidCount: 'DataValidCount',
+            validForHeatingCurveCount: 'ValidForHeatingCurveCount',
+            tooColdCount: 'TooColdCount',
+            okCount: 'OKCount',
+            tooWarmCount: 'TooWarmCount',
+            averageDeviation: 'AverageDeviation',
+            medianDeviation: 'MedianDeviation',
+            deviationStdDev: 'DeviationStdDev',
+            deviationRange: 'DeviationRange',
+            coldestRoom: 'ColdestRoom',
+            coldestRoomDeviation: 'ColdestRoomDeviation',
+            warmestRoom: 'WarmestRoom',
+            warmestRoomDeviation: 'WarmestRoomDeviation'
+        });
+
+        writeMapped('HeatingOptimization.Analysis', heating.analysis, {
+            valid: 'Valid',
+            validHeatingHours: 'ValidHeatingHours',
+            dataQualityPercent: 'DataQualityPercent',
+            avgOutdoorTemperature: 'AvgOutdoorTemperature',
+            avgFlowTarget: 'AvgFlowTarget',
+            avgFlowActual: 'AvgFlowActual',
+            avgFlowDeviation: 'AvgFlowDeviation',
+            avgRoomDeviation: 'AvgRoomDeviation',
+            medianRoomDeviation: 'MedianRoomDeviation',
+            tooColdRatio: 'TooColdRatio',
+            okRatio: 'OKRatio',
+            tooWarmRatio: 'TooWarmRatio',
+            compressorRuntimePercent: 'CompressorRuntimePercent',
+            additionalHeatRuntimePercent: 'AdditionalHeatRuntimePercent'
+        });
+
+        writeMapped('HeatingOptimization.Evidence', heating.evidence, {
+            globalTemperatureState: 'GlobalTemperatureState',
+            flowTrackingState: 'FlowTrackingState',
+            outdoorDependenceState: 'OutdoorDependenceState',
+            roomImbalance: 'RoomImbalance',
+            additionalHeatInfluence: 'AdditionalHeatInfluence',
+            sensorMismatch: 'SensorMismatch',
+            insufficientData: 'InsufficientData'
+        });
+
+        writeMapped('HeatingOptimization.DataQuality', heating.dataQuality, {
+            sourceCheckOk: 'SourceCheckOk',
+            requiredTotal: 'RequiredTotal',
+            requiredOk: 'RequiredOk',
+            requiredMissing: 'RequiredMissing',
+            optionalTotal: 'OptionalTotal',
+            optionalOk: 'OptionalOk',
+            optionalMissing: 'OptionalMissing',
+            roomSourcesConfigured: 'RoomSourcesConfigured',
+            roomSourcesValid: 'RoomSourcesValid',
+            percent: 'Percent',
+            state: 'State',
+            sampleQuality: 'SampleQuality',
+            sampleValid: 'SampleValid',
+            validHeatingHours: 'ValidHeatingHours',
+            analysisReady: 'AnalysisReady'
+        });
+
+        const config = heating.configuration;
+        writeMapped('HeatingOptimization.Configuration', {
+            heatingCurve: config.heatingCurve,
+            heatingCurveOffset: config.heatingCurveOffset,
+            flowMin: config.flowMin,
+            flowMax: config.flowMax,
+            heatingStartUndertemp: config.heatingStartUndertemp,
+            heatingStopTemperature: config.heatingStopTemperature,
+            additionalHeatStopTemperature: config.additionalHeatStopTemperature,
+            autoFilterTime: config.autoFilterTime,
+            maxFlowDifferenceCompressor: config.maxFlowDifferenceCompressor,
+            operatingMode: config.operatingMode,
+            operatingModeText: mapHeatingConfigurationOperatingMode(config.operatingMode),
+            heatingAutomatic: config.heatingAutomatic,
+            changedAt: config.changedAt,
+            pointOutdoorTemperature: config.pointOutdoorTemperature,
+            pointOffset: config.pointOffset
+        }, {
+            heatingCurve: 'HeatingCurve',
+            heatingCurveOffset: 'HeatingCurveOffset',
+            flowMin: 'FlowMin',
+            flowMax: 'FlowMax',
+            heatingStartUndertemp: 'HeatingStartUndertemp',
+            heatingStopTemperature: 'HeatingStopTemperature',
+            additionalHeatStopTemperature: 'AdditionalHeatStopTemperature',
+            autoFilterTime: 'AutoFilterTime',
+            maxFlowDifferenceCompressor: 'MaxFlowDifferenceCompressor',
+            operatingMode: 'OperatingMode',
+            operatingModeText: 'OperatingModeText',
+            heatingAutomatic: 'HeatingAutomatic',
+            changedAt: 'ChangedAt',
+            pointOutdoorTemperature: 'PointOutdoorTemperature',
+            pointOffset: 'PointOffset'
+        });
+
+        config.customCurve.forEach(function (value, index) {
+            write(
+                'HeatingOptimization.Configuration.CustomCurveP' + (index + 1),
+                value
+            );
+        });
+
+        write('HeatingOptimization.Tables.RoomsJson', heating.tables.rooms);
+        write('HeatingOptimization.Tables.AnalysisWindowsJson', heating.tables.analysisWindows);
+        write('HeatingOptimization.Tables.EvidenceJson', heating.tables.evidence);
+        write('HeatingOptimization.Tables.DataQualityJson', heating.tables.dataQuality);
+    }
+
     function updateDashboard(reason) {
         if (running) {
             pending = true;
@@ -3499,6 +4503,7 @@ code{background:#1f1f1f;padding:2px 5px;border-radius:4px;}
             const cycles = collectCycle();
             const defrost = collectDefrost();
             const events = collectEvents();
+            const heatingOptimization = collectHeatingOptimization();
 
             const rawMode = readText(SOURCE.MODE, '');
             const rawState = readText(SOURCE.STATE, '');
@@ -3925,6 +4930,8 @@ code{background:#1f1f1f;padding:2px 5px;border-radius:4px;}
 
             updateStatisticsOutputs();
 
+            publishHeatingOptimization(heatingOptimization);
+
             updateCounter += 1;
             const allValid = temperatures.valid && compressor.valid && energy.valid && defrost.valid;
 
@@ -4044,6 +5051,12 @@ code{background:#1f1f1f;padding:2px 5px;border-radius:4px;}
             SOURCE.STAT_YEAR_HEAT_WARMWATER,
             SOURCE.STAT_YEAR_HEAT_HEATING_COMP,
             SOURCE.STAT_YEAR_HEAT_WARMWATER_COMP,
+            SOURCE.HEATING_AI_GENERATED_AT,
+            SOURCE.HEATING_STATUS_LAST_CALCULATION,
+            SOURCE.HEATING_STATUS_SOURCE_CHECK_JSON,
+            SOURCE.HEATING_ROOMS_JSON,
+            SOURCE.HEATING_ANALYSIS_EVIDENCE_JSON,
+            heatingSource('Configuration.ChangedAt'),
             id('Configuration.ElectricityPrice')
         ].filter(function (sourceId, index, all) {
             return existsState(sourceId) && all.indexOf(sourceId) === index;
