@@ -3,7 +3,7 @@
  * NIBE Performance Suite (NPS)
  * ============================================================
  * Modul:   15_NPS_HeatingCurveAnalyzer
- * Version: 0.1.1
+ * Version: 0.2.0
  *
  * Zweck:
  *   Heizungsoptimierung / Heizkurvenanalyse
@@ -12,7 +12,7 @@
  *   Ziel: 1.1
  *
  * Status:
- *   STABLE – Release 0.1.1
+ *   RELEASE – v0.2.0 / NPS 1.1
  *
  * Sicherheit:
  *   - nur lesender Zugriff auf Anlagenquellen
@@ -20,17 +20,46 @@
  *   - keine externe KI-Kommunikation
  *   - kein direkter MQTT-Zugriff
  *
- * Release 0.1.1:
- *   - kompletter freigegebener Stand aus RC.1
- *   - T3: definierte Influx-States werden im 5-Minuten-Raster
- *         auch bei unverändertem Wert geschrieben
- *   - T8: SourceCheck wird bei jedem 5-Minuten-Lauf erneuert
- *   - Status.SourceCheckOk / SourceCheckJson bleiben zur Laufzeit aktuell
- *   - fehlende Required Sources setzen Status.Valid=false
- *   - automatische Erholung nach Wiederkehr der Required Sources
- *   - Evidence / DataQuality / AI-Payload verwenden den aktuellen SourceCheck
+ * Entwicklungsstand v0.2.0-alpha.1 / T9.1:
+ *   - Basis: unveränderter freigegebener Stand v0.1.1
+ *   - NPS-AI-AnalysisPayload Schema 1.1
+ *   - eindeutige Schema-Kennung
+ *   - primäres Analysefenster 72 h explizit im Payload
+ *   - statischer Anlagenkontext system.plant
+ *   - T9.1: previousOptimization als reserviertes Schemafeld eingeführt
+ *   - T9.3: previousOptimization aus AI.Optimization.LastRecord
+ *   - T9.3: nur schema-kompatible NPS-AI-OptimizationRecord-v1.0-Objekte werden übernommen
+ *   - T9.4: Recommendation-State-Struktur eingeführt
+ *   - T9.4: RecommendationPayload ist manuell beschreibbarer Eingabepunkt
+ *   - T9.4: noch kein Parser, keine Validierung und keine ChangeAllowed-Logik
+ *   - T9.5: RecommendationPayload-Parser aktiv
+ *   - T9.5: InputPayload wird bei Änderung und nach Neustart eingelesen
+ *   - T9.5: reine JSON-/Feldabbildung; keine semantische Validierung
+ *   - T9.5: ChangeAllowed bleibt immer false
+ *   - T9.6: RecommendationPayload-Validator aktiv
+ *   - T9.6: Schema, Pflichtfelder, Enums und CHANGE_PARAMETER-Regeln werden geprüft
+ *   - T9.6: Recommendation.Valid / ValidationState / ValidationErrorsJson werden gesetzt
+ *   - T9.6: ChangeAllowed bleibt weiterhin immer false (T9.7)
+ *   - T9.7: ChangeAllowed-Sicherheitsentscheidung aktiv
+ *   - T9.7: Freigabe nur bei gültiger CHANGE_PARAMETER-Empfehlung und ohne Hard-Blocker
+ *   - T9.7: AI.Ready, Evidence, Konfigurationssignatur und aktueller Parameterwert werden geprüft
+ *   - T9.7: Steilheitsänderungen benötigen mindestens 2 gültige Outdoor-Bins
+ *   - T9.7: keine automatische NIBE-Änderung; der Benutzer entscheidet weiterhin manuell
+ *   - T9.8: NPS-AI-OptimizationRecord v1.0 aktiv
+ *   - T9.8: bei freigegebener Empfehlung wird ein PendingRecord als Vorher-Snapshot gesichert
+ *   - T9.8: eine passende manuelle NIBE-Änderung wird automatisch als LastRecord dokumentiert
+ *   - T9.8: Observation startet mit der erkannten manuellen Änderung; Evaluation bleibt NOT_EVALUATED (T9.9)
+ *   - T9.8: keine automatische NIBE-Änderung und keine automatische Bewertung
+ *   - T9.9: abgeschlossene Beobachtungszyklen werden deterministisch bewertet
+ *   - T9.10: interner Startup-Integritätstest der AI-Optimierungskette
+ *   - T9.9: Vergleich von absoluter 72h-Median-Raumabweichung und 72h-OK-Anteil
+ *   - T9.9: Ergebnis IMPROVED / UNCHANGED / WORSENED / INCONCLUSIVE
+ *   - T9.9: Bewertung nur nach Ablauf der Observation und bei belastbarer Nachher-Datenbasis
+ *   - keine Änderung an Mess-, Analyse-, Evidence- oder AI.Ready-Logik
+ *   - T9.2: OutdoorBins um Raum-Komfortanteile erweitert
+ *   - tooColdRatioPercent / okRatioPercent / tooWarmRatioPercent
  *
- * Laufzeitverhalten v0.1.1:
+ * Laufzeitverhalten v0.2.0-alpha.2:
  *   - dauerhaft laufendes Script
  *   - Status.Active = true, sobald der Scheduler aktiv ist
  * ============================================================
@@ -47,7 +76,7 @@ const DEBUG = false;
 // Modulkonfiguration
 // ============================================================
 const MODULE_NAME = 'HeatingCurveAnalyzer';
-const VERSION = '0.1.1';
+const VERSION = '0.2.0';
 const LOG_PREFIX = `[NPS ${MODULE_NAME}]`;
 const ROOT = '0_userdata.0.NPS.HeatingOptimization';
 
@@ -100,8 +129,28 @@ const EVIDENCE_LIMITS = {
     AI_READY_DATA_QUALITY_PERCENT: 75
 };
 
+// T9.9 - konservative Schwellen fuer den Vorher-/Nachher-Vergleich.
+// Kleine Bewegungen innerhalb dieser Totbaender werden als UNCHANGED gewertet.
+const OPTIMIZATION_EVALUATION_LIMITS = Object.freeze({
+    MEDIAN_ABS_DEVIATION_CHANGE_K: 0.2,
+    OK_RATIO_CHANGE_PERCENT_POINTS: 5
+});
 
-const PAYLOAD_VERSION = '1.0';
+
+// T9.1 - standardisierte, anbieterunabhaengige AI-Schnittstelle.
+const PAYLOAD_SCHEMA = 'NPS-AI-AnalysisPayload';
+const PAYLOAD_VERSION = '1.1';
+const PRIMARY_ANALYSIS_PERIOD_HOURS = 72;
+
+const PLANT_INFO = Object.freeze({
+    manufacturer: 'NIBE',
+    outdoorUnit: 'S2125-12',
+    indoorUnit: 'VVM S500',
+    systemType: 'air_water_heatpump',
+    heatDistribution: 'radiators',
+    heatingCircuits: 1
+});
+
 const MAX_AI_PAYLOAD_BYTES = 65536;
 
 // v0.1.1 / T3 - für Influx vorgesehene 5-Minuten-Zeitreihen.
@@ -318,6 +367,7 @@ const ROOMS = [
  * @property {string} role
  * @property {string|number|boolean} def
  * @property {string=} unit
+ * @property {boolean=} write
  */
 
 /** @type {DpDefinition[]} */
@@ -412,6 +462,37 @@ const DP_DEFINITIONS = [
     {id:'AI.PayloadVersion',type:'string',role:'info.version',def:PAYLOAD_VERSION},
     {id:'AI.GeneratedAt',type:'string',role:'date',def:''},
     {id:'AI.Ready',type:'boolean',role:'indicator',def:false},
+    {id:'AI.Optimization.LastRecord',type:'string',role:'json',def:'null'},
+    {id:'AI.Optimization.PendingRecord',type:'string',role:'json',def:'null'},
+    {id:'AI.Optimization.Status',type:'string',role:'text',def:'IDLE'},
+
+    // AI Recommendation - T9.4
+    // InputPayload ist der einzige bewusst beschreibbare State.
+    // Parser/Validator/ChangeAllowed werden erst in T9.5-T9.7 aktiv.
+    {id:'AI.Recommendation.InputPayload',type:'string',role:'json',def:'{}',write:true},
+    {id:'AI.Recommendation.ReceivedAt',type:'string',role:'date',def:''},
+    {id:'AI.Recommendation.Schema',type:'string',role:'text',def:''},
+    {id:'AI.Recommendation.SchemaVersion',type:'string',role:'info.version',def:''},
+    {id:'AI.Recommendation.AnalysisGeneratedAt',type:'string',role:'date',def:''},
+    {id:'AI.Recommendation.AnalysisSchemaVersion',type:'string',role:'info.version',def:''},
+    {id:'AI.Recommendation.ConfigurationSignature',type:'string',role:'text',def:''},
+    {id:'AI.Recommendation.AnalysisValid',type:'boolean',role:'indicator',def:false},
+    {id:'AI.Recommendation.ConfidencePercent',type:'number',role:'value',unit:'%',def:0},
+    {id:'AI.Recommendation.OverallState',type:'string',role:'text',def:''},
+    {id:'AI.Recommendation.PrimaryFinding',type:'string',role:'text',def:''},
+    {id:'AI.Recommendation.Action',type:'string',role:'text',def:''},
+    {id:'AI.Recommendation.Parameter',type:'string',role:'text',def:''},
+    {id:'AI.Recommendation.CurrentValue',type:'number',role:'value',def:0},
+    {id:'AI.Recommendation.RecommendedValue',type:'number',role:'value',def:0},
+    {id:'AI.Recommendation.Change',type:'number',role:'value',def:0},
+    {id:'AI.Recommendation.SecondaryRecommendationJson',type:'string',role:'json',def:'null'},
+    {id:'AI.Recommendation.ReasonCodesJson',type:'string',role:'json',def:'[]'},
+    {id:'AI.Recommendation.Explanation',type:'string',role:'text',def:''},
+    {id:'AI.Recommendation.ObservationHours',type:'number',role:'value.interval',unit:'h',def:0},
+    {id:'AI.Recommendation.Valid',type:'boolean',role:'indicator',def:false},
+    {id:'AI.Recommendation.ValidationState',type:'string',role:'text',def:'NOT_VALIDATED'},
+    {id:'AI.Recommendation.ValidationErrorsJson',type:'string',role:'json',def:'[]'},
+    {id:'AI.Recommendation.ChangeAllowed',type:'boolean',role:'indicator',def:false},
 
     // Internal
     {id:'Internal.SampleBufferJson',type:'string',role:'json',def:'[]'},
@@ -632,6 +713,27 @@ async function ensureDatapoints() {
     let existing = 0;
     let normalized = 0;
 
+    // T9.3/T9.4: Zusätzliche AI-Hierarchieebenen werden vor ihren
+    // States explizit angelegt. Bestehende Objekte werden nicht umtypisiert.
+    const aiChannels = [
+        ['Optimization', `${ROOT}.AI.Optimization`],
+        ['Recommendation', `${ROOT}.AI.Recommendation`]
+    ];
+
+    for (const [name, channelId] of aiChannels) {
+        const channel = await getObjectAsync(channelId);
+
+        if (!channel) {
+            await extendObjectAsync(channelId, {
+                type: 'channel',
+                common: {
+                    name: name
+                },
+                native: {}
+            });
+        }
+    }
+
     for (const def of DP_DEFINITIONS) {
         const id = `${ROOT}.${def.id}`;
 
@@ -640,7 +742,7 @@ async function ensureDatapoints() {
             type: /** @type {'number'|'string'|'boolean'} */ (def.type),
             role: def.role,
             read: true,
-            write: false,
+            write: def.write === true,
             def: def.def
         };
 
@@ -662,8 +764,12 @@ async function ensureDatapoints() {
                 currentCommon.type !== common.type ||
                 currentCommon.role !== common.role ||
                 currentCommon.read !== true ||
-                currentCommon.write !== false ||
-                (def.unit !== undefined && currentCommon.unit !== def.unit);
+                currentCommon.write !== common.write ||
+                (def.unit !== undefined && currentCommon.unit !== def.unit) ||
+                (
+                    def.id === 'AI.PayloadVersion' &&
+                    currentCommon.def !== common.def
+                );
 
             if (needsNormalize) {
                 await extendObjectAsync(id, {
@@ -1448,6 +1554,1383 @@ async function writeRooms(roomEvaluation, forceInfluxWrite = false) {
 
 
 // ============================================================
+// T9.8 - OptimizationRecord v1.0
+// ============================================================
+const OPTIMIZATION_RECORD_SCHEMA = 'NPS-AI-OptimizationRecord';
+const OPTIMIZATION_RECORD_SCHEMA_VERSION = '1.0';
+
+function optimizationReadJsonState(relativeId) {
+    const raw = getState(`${ROOT}.${relativeId}`)?.val;
+
+    if (
+        raw === null ||
+        raw === undefined ||
+        raw === '' ||
+        raw === 'null' ||
+        raw === '{}'
+    ) {
+        return null;
+    }
+
+    try {
+        const parsed = JSON.parse(String(raw));
+        return recommendationIsObject(parsed) ? parsed : null;
+    } catch (_) {
+        return null;
+    }
+}
+
+function optimizationAnalysisSnapshot() {
+    const payload = optimizationReadJsonState('AI.AnalysisPayload');
+
+    if (!payload) return null;
+
+    return {
+        generatedAt: recommendationString(payload.generatedAt, ''),
+        ready: payload.ready === true,
+        configurationSignature:
+            recommendationString(payload.configuration?.signature, ''),
+        analysis72h:
+            recommendationIsObject(payload.analysis?.['72h'])
+                ? payload.analysis['72h']
+                : null,
+        evidence:
+            recommendationIsObject(payload.evidence)
+                ? payload.evidence
+                : null,
+        dataQuality:
+            recommendationIsObject(payload.dataQuality)
+                ? payload.dataQuality
+                : null
+    };
+}
+
+function optimizationRecordId(receivedAt, parameter) {
+    const stamp = recommendationIsNonEmptyString(receivedAt)
+        ? receivedAt
+        : new Date().toISOString();
+
+    return `${stamp}|${parameter || 'unknown'}`;
+}
+
+function buildPendingOptimizationRecord(payload, context = {}) {
+    const recommendation = payload.recommendation;
+    const assessment = payload.assessment;
+    const receivedAt = recommendationString(
+        context.receivedAt,
+        recommendationString(
+            getState(`${ROOT}.AI.Recommendation.ReceivedAt`)?.val,
+            new Date().toISOString()
+        )
+    );
+
+    const observationHours =
+        recommendationNumber(
+            payload.observation?.recommendedObservationHours,
+            RECOMMENDATION_STANDARD_OBSERVATION_HOURS
+        );
+
+    return {
+        schema: OPTIMIZATION_RECORD_SCHEMA,
+        schemaVersion: OPTIMIZATION_RECORD_SCHEMA_VERSION,
+        recordId: optimizationRecordId(
+            receivedAt,
+            recommendation.parameter
+        ),
+        recordState: 'PENDING_MANUAL_CHANGE',
+        createdAt: recommendationString(context.createdAt, new Date().toISOString()),
+        source: {
+            recommendationReceivedAt: receivedAt,
+            analysisGeneratedAt: recommendationString(
+                payload.analysisReference?.analysisGeneratedAt,
+                ''
+            ),
+            analysisSchemaVersion: recommendationString(
+                payload.analysisReference?.analysisSchemaVersion,
+                ''
+            )
+        },
+        recommendation: {
+            confidence: recommendationNumber(payload.confidence, 0),
+            overallState: recommendationString(
+                assessment?.overallState,
+                ''
+            ),
+            primaryFinding: recommendationString(
+                assessment?.primaryFinding,
+                ''
+            ),
+            reasonCodes: Array.isArray(payload.reasonCodes)
+                ? payload.reasonCodes.slice()
+                : [],
+            explanation: recommendationString(payload.explanation, '')
+        },
+        change: {
+            parameter: recommendationString(recommendation.parameter, ''),
+            beforeValue: recommendationNumber(recommendation.currentValue, 0),
+            recommendedValue: recommendationNumber(
+                recommendation.recommendedValue,
+                0
+            ),
+            change: recommendationNumber(recommendation.change, 0),
+            afterValue: null,
+            beforeConfigurationSignature: recommendationString(
+                payload.analysisReference?.configurationSignature,
+                ''
+            ),
+            afterConfigurationSignature: null,
+            appliedAt: null
+        },
+        observation: {
+            recommendedHours: observationHours,
+            startedAt: null,
+            evaluateAfter: null
+        },
+        before: context.beforeSnapshot ?? optimizationAnalysisSnapshot(),
+        after: null,
+        evaluation: {
+            status: 'NOT_EVALUATED',
+            evaluatedAt: null,
+            reasonCodes: [],
+            summary: ''
+        }
+    };
+}
+
+async function capturePendingOptimizationRecord(payload) {
+    if (
+        !recommendationIsObject(payload) ||
+        !recommendationIsObject(payload.recommendation) ||
+        payload.recommendation.action !== 'CHANGE_PARAMETER'
+    ) {
+        return null;
+    }
+
+    const candidate = buildPendingOptimizationRecord(payload);
+    const existing = optimizationReadJsonState(
+        'AI.Optimization.PendingRecord'
+    );
+
+    if (
+        existing?.schema === OPTIMIZATION_RECORD_SCHEMA &&
+        existing?.schemaVersion === OPTIMIZATION_RECORD_SCHEMA_VERSION &&
+        existing?.recordId === candidate.recordId &&
+        existing?.change?.beforeConfigurationSignature ===
+            candidate.change.beforeConfigurationSignature
+    ) {
+        return existing;
+    }
+
+    await setStateAsync(
+        `${ROOT}.AI.Optimization.PendingRecord`,
+        JSON.stringify(candidate),
+        true
+    );
+    await setStateAsync(
+        `${ROOT}.AI.Optimization.Status`,
+        'WAITING_FOR_MANUAL_CHANGE',
+        true
+    );
+
+    log(
+        `${LOG_PREFIX} OptimizationRecord: PendingRecord angelegt | ` +
+        `Parameter=${candidate.change.parameter} | ` +
+        `${candidate.change.beforeValue} -> ${candidate.change.recommendedValue}`,
+        'info'
+    );
+
+    return candidate;
+}
+
+function optimizationCurrentParameterValue(config, parameter) {
+    if (parameter === 'heatingCurve') {
+        return recommendationIsFiniteNumber(Number(config?.heatingCurve))
+            ? Number(config.heatingCurve)
+            : null;
+    }
+
+    if (parameter === 'heatingCurveOffset') {
+        return recommendationIsFiniteNumber(Number(config?.heatingCurveOffset))
+            ? Number(config.heatingCurveOffset)
+            : null;
+    }
+
+    return null;
+}
+
+function buildObservingOptimizationRecord(
+    pending,
+    {appliedAt, currentValue, signature}
+) {
+    const observationHours = recommendationNumber(
+        pending.observation?.recommendedHours,
+        RECOMMENDATION_STANDARD_OBSERVATION_HOURS
+    );
+    const evaluateAfter = new Date(
+        Date.parse(appliedAt) + observationHours * 60 * 60 * 1000
+    ).toISOString();
+
+    return {
+        ...pending,
+        recordState: 'OBSERVING',
+        change: {
+            ...pending.change,
+            afterValue: currentValue,
+            afterConfigurationSignature: signature,
+            appliedAt
+        },
+        observation: {
+            recommendedHours: observationHours,
+            startedAt: appliedAt,
+            evaluateAfter
+        },
+        after: null,
+        evaluation: {
+            status: 'NOT_EVALUATED',
+            evaluatedAt: null,
+            reasonCodes: [],
+            summary: ''
+        }
+    };
+}
+
+async function finalizePendingOptimizationRecord({timestamp, config, signature}) {
+    const pending = optimizationReadJsonState(
+        'AI.Optimization.PendingRecord'
+    );
+
+    if (!pending) return null;
+
+    if (
+        pending.schema !== OPTIMIZATION_RECORD_SCHEMA ||
+        pending.schemaVersion !== OPTIMIZATION_RECORD_SCHEMA_VERSION ||
+        !recommendationIsObject(pending.change)
+    ) {
+        await setStateAsync(
+            `${ROOT}.AI.Optimization.Status`,
+            'PENDING_RECORD_INVALID',
+            true
+        );
+        return null;
+    }
+
+    const beforeSignature = recommendationString(
+        pending.change.beforeConfigurationSignature,
+        ''
+    );
+
+    if (
+        !recommendationIsNonEmptyString(signature) ||
+        signature === beforeSignature
+    ) {
+        return null;
+    }
+
+    const currentValue = optimizationCurrentParameterValue(
+        config,
+        pending.change.parameter
+    );
+    const recommendedValue = pending.change.recommendedValue;
+
+    if (
+        currentValue === null ||
+        !recommendationIsFiniteNumber(recommendedValue) ||
+        Math.abs(currentValue - recommendedValue) > 0.000001
+    ) {
+        await setStateAsync(
+            `${ROOT}.AI.Optimization.PendingRecord`,
+            'null',
+            true
+        );
+        await setStateAsync(
+            `${ROOT}.AI.Optimization.Status`,
+            'CONFIGURATION_CHANGED_UNEXPECTEDLY',
+            true
+        );
+
+        log(
+            `${LOG_PREFIX} OptimizationRecord: PendingRecord verworfen | ` +
+            `Konfiguration geändert, Zielwert nicht bestätigt`,
+            'warn'
+        );
+        return null;
+    }
+
+    const appliedAt = recommendationIsNonEmptyString(timestamp)
+        ? timestamp
+        : new Date().toISOString();
+    const record = buildObservingOptimizationRecord(
+        pending,
+        { appliedAt, currentValue, signature }
+    );
+    const observationHours = record.observation.recommendedHours;
+
+    await setStateAsync(
+        `${ROOT}.AI.Optimization.LastRecord`,
+        JSON.stringify(record),
+        true
+    );
+    await setStateAsync(
+        `${ROOT}.AI.Optimization.PendingRecord`,
+        'null',
+        true
+    );
+    await setStateAsync(
+        `${ROOT}.AI.Optimization.Status`,
+        'OBSERVING',
+        true
+    );
+
+    log(
+        `${LOG_PREFIX} OptimizationRecord: manuelle Änderung dokumentiert | ` +
+        `Parameter=${record.change.parameter} | ` +
+        `${record.change.beforeValue} -> ${record.change.afterValue} | ` +
+        `Beobachtung=${observationHours} h`,
+        'info'
+    );
+
+    return record;
+}
+
+// ============================================================
+// T9.9 - OptimizationRecord Evaluation
+// ============================================================
+function optimizationEvaluationMetrics(snapshot) {
+    const analysis72h = snapshot?.analysis72h;
+    const rooms = analysis72h?.rooms;
+
+    if (
+        !recommendationIsObject(snapshot) ||
+        !recommendationIsObject(analysis72h) ||
+        !recommendationIsObject(rooms)
+    ) {
+        return null;
+    }
+
+    const medianDeviationRaw = rooms.medianDeviationK;
+    const okRatioRaw = rooms.okRatioPercent;
+
+    if (
+        !recommendationIsFiniteNumber(medianDeviationRaw) ||
+        !recommendationIsFiniteNumber(okRatioRaw)
+    ) {
+        return null;
+    }
+
+    return {
+        medianRoomDeviationK: roundNumber(medianDeviationRaw, 1),
+        absoluteMedianRoomDeviationK: roundNumber(Math.abs(medianDeviationRaw), 1),
+        okRatioPercent: roundNumber(okRatioRaw, 1)
+    };
+}
+
+function classifyOptimizationEvaluation(beforeSnapshot, afterSnapshot) {
+    const before = optimizationEvaluationMetrics(beforeSnapshot);
+    const after = optimizationEvaluationMetrics(afterSnapshot);
+
+    if (!before || !after) {
+        return {
+            status: 'INCONCLUSIVE',
+            reasonCodes: ['EVALUATION_METRICS_MISSING'],
+            summary: 'Vorher-/Nachher-Metriken fuer die Bewertung fehlen.',
+            metrics: null
+        };
+    }
+
+    const absoluteDeviationImprovementK = roundNumber(
+        before.absoluteMedianRoomDeviationK -
+            after.absoluteMedianRoomDeviationK,
+        1
+    );
+    const okRatioChangePercentPoints = roundNumber(
+        after.okRatioPercent - before.okRatioPercent,
+        1
+    );
+
+    const deviationLimit =
+        OPTIMIZATION_EVALUATION_LIMITS.MEDIAN_ABS_DEVIATION_CHANGE_K;
+    const okRatioLimit =
+        OPTIMIZATION_EVALUATION_LIMITS.OK_RATIO_CHANGE_PERCENT_POINTS;
+
+    const deviationDirection =
+        absoluteDeviationImprovementK >= deviationLimit
+            ? 1
+            : absoluteDeviationImprovementK <= -deviationLimit
+                ? -1
+                : 0;
+
+    const okRatioDirection =
+        okRatioChangePercentPoints >= okRatioLimit
+            ? 1
+            : okRatioChangePercentPoints <= -okRatioLimit
+                ? -1
+                : 0;
+
+    let status;
+    let reasonCodes;
+    let summary;
+
+    if (
+        (deviationDirection > 0 || okRatioDirection > 0) &&
+        deviationDirection >= 0 &&
+        okRatioDirection >= 0
+    ) {
+        status = 'IMPROVED';
+        reasonCodes = ['COMFORT_METRICS_IMPROVED'];
+        summary = 'Die Komfortkennzahlen haben sich nach der Aenderung verbessert.';
+    } else if (
+        (deviationDirection < 0 || okRatioDirection < 0) &&
+        deviationDirection <= 0 &&
+        okRatioDirection <= 0
+    ) {
+        status = 'WORSENED';
+        reasonCodes = ['COMFORT_METRICS_WORSENED'];
+        summary = 'Die Komfortkennzahlen haben sich nach der Aenderung verschlechtert.';
+    } else if (
+        deviationDirection === 0 &&
+        okRatioDirection === 0
+    ) {
+        status = 'UNCHANGED';
+        reasonCodes = ['NO_SIGNIFICANT_CHANGE'];
+        summary = 'Es ist keine ausreichend grosse Aenderung der Komfortkennzahlen erkennbar.';
+    } else {
+        status = 'INCONCLUSIVE';
+        reasonCodes = ['EVALUATION_METRICS_CONFLICT'];
+        summary = 'Die Vorher-/Nachher-Kennzahlen zeigen kein eindeutiges gemeinsames Ergebnis.';
+    }
+
+    return {
+        status,
+        reasonCodes,
+        summary,
+        metrics: {
+            before,
+            after,
+            absoluteMedianDeviationImprovementK: absoluteDeviationImprovementK,
+            okRatioChangePercentPoints
+        }
+    };
+}
+
+function optimizationEvaluationPreconditionErrors(record, afterSnapshot, signature) {
+    const reasons = [];
+
+    if (!recommendationIsObject(record?.before)) {
+        reasons.push('BEFORE_SNAPSHOT_MISSING');
+    } else {
+        if (record.before.ready !== true) {
+            reasons.push('BEFORE_ANALYSIS_NOT_READY');
+        }
+        if (record.before.analysis72h?.valid !== true) {
+            reasons.push('BEFORE_72H_ANALYSIS_INVALID');
+        }
+    }
+
+    if (!recommendationIsObject(afterSnapshot)) {
+        reasons.push('AFTER_SNAPSHOT_MISSING');
+    } else {
+        if (afterSnapshot.ready !== true) {
+            reasons.push('AFTER_ANALYSIS_NOT_READY');
+        }
+        if (afterSnapshot.analysis72h?.valid !== true) {
+            reasons.push('AFTER_72H_ANALYSIS_INVALID');
+        }
+    }
+
+    const expectedSignature = recommendationString(
+        record?.change?.afterConfigurationSignature,
+        ''
+    );
+    if (
+        !recommendationIsNonEmptyString(signature) ||
+        !recommendationIsNonEmptyString(expectedSignature) ||
+        signature !== expectedSignature
+    ) {
+        reasons.push('CONFIGURATION_CHANGED_DURING_OBSERVATION');
+    }
+
+    return reasons;
+}
+
+async function evaluateLastOptimizationRecord({timestamp, signature}) {
+    const record = optimizationReadJsonState(
+        'AI.Optimization.LastRecord'
+    );
+
+    if (!record) return null;
+
+    if (
+        record.schema !== OPTIMIZATION_RECORD_SCHEMA ||
+        record.schemaVersion !== OPTIMIZATION_RECORD_SCHEMA_VERSION ||
+        record.recordState !== 'OBSERVING' ||
+        record.evaluation?.status !== 'NOT_EVALUATED'
+    ) {
+        return null;
+    }
+
+    const evaluateAfter = Date.parse(
+        recommendationString(record.observation?.evaluateAfter, '')
+    );
+    const nowMs =
+        recommendationIsFiniteNumber(Number(timestamp))
+            ? Number(timestamp)
+            : Date.now();
+
+    if (!Number.isFinite(evaluateAfter) || nowMs < evaluateAfter) {
+        return null;
+    }
+
+    const afterSnapshot = optimizationAnalysisSnapshot();
+    const preconditionErrors =
+        optimizationEvaluationPreconditionErrors(
+            record,
+            afterSnapshot,
+            signature
+        );
+
+    const evaluatedAt = new Date(nowMs).toISOString();
+    let result;
+
+    if (preconditionErrors.length > 0) {
+        result = {
+            status: 'INCONCLUSIVE',
+            reasonCodes: preconditionErrors,
+            summary: 'Die Beobachtungsphase ist beendet, aber die Datenbasis erlaubt keine belastbare Bewertung.',
+            metrics: null
+        };
+    } else {
+        result = classifyOptimizationEvaluation(
+            record.before,
+            afterSnapshot
+        );
+    }
+
+    const evaluatedRecord = {
+        ...record,
+        recordState: 'EVALUATED',
+        after: afterSnapshot,
+        evaluation: {
+            status: result.status,
+            evaluatedAt,
+            reasonCodes: result.reasonCodes,
+            summary: result.summary,
+            metrics: result.metrics
+        }
+    };
+
+    await setStateAsync(
+        `${ROOT}.AI.Optimization.LastRecord`,
+        JSON.stringify(evaluatedRecord),
+        true
+    );
+    await setStateAsync(
+        `${ROOT}.AI.Optimization.Status`,
+        'EVALUATED',
+        true
+    );
+
+    log(
+        `${LOG_PREFIX} OptimizationRecord: Bewertung abgeschlossen | ` +
+        `Ergebnis=${result.status}` +
+        `${result.reasonCodes.length > 0 ? ` | ${result.reasonCodes.join(',')}` : ''}`,
+        result.status === 'WORSENED' || result.status === 'INCONCLUSIVE'
+            ? 'warn'
+            : 'info'
+    );
+
+    return evaluatedRecord;
+}
+
+// ============================================================
+// T9.5 - RecommendationPayload Parser
+// ============================================================
+let recommendationSubscription = null;
+
+function recommendationString(value, fallback = '') {
+    return typeof value === 'string' ? value : fallback;
+}
+
+function recommendationNumber(value, fallback = 0) {
+    return typeof value === 'number' && Number.isFinite(value)
+        ? value
+        : fallback;
+}
+
+function recommendationBoolean(value, fallback = false) {
+    return typeof value === 'boolean' ? value : fallback;
+}
+
+function recommendationJson(value, fallback) {
+    if (value === undefined) return fallback;
+
+    try {
+        return JSON.stringify(value);
+    } catch (_) {
+        return fallback;
+    }
+}
+
+function recommendationConfidencePercent(value) {
+    if (typeof value !== 'number' || !Number.isFinite(value)) return 0;
+
+    // Standardschema verwendet 0.0 ... 1.0. Werte außerhalb dieses
+    // Bereichs werden vom Parser nicht fachlich bewertet; T9.6 validiert sie.
+    const percent = value >= 0 && value <= 1
+        ? value * 100
+        : value;
+
+    return Math.round(percent * 10) / 10;
+}
+
+
+// ============================================================
+// T9.6 - RecommendationPayload Validator
+// ============================================================
+const RECOMMENDATION_SCHEMA = 'NPS-AI-RecommendationPayload';
+const RECOMMENDATION_SCHEMA_VERSION = '1.0';
+const RECOMMENDATION_ANALYSIS_SCHEMA_VERSION = '1.1';
+const RECOMMENDATION_MIN_CHANGE_CONFIDENCE = 0.75;
+const RECOMMENDATION_STANDARD_OBSERVATION_HOURS = 72;
+
+const RECOMMENDATION_ACTIONS = new Set([
+    'NO_CHANGE',
+    'CHANGE_PARAMETER',
+    'INVESTIGATE',
+    'INSUFFICIENT_DATA'
+]);
+
+const RECOMMENDATION_OVERALL_STATES = new Set([
+    'SYSTEM_OK',
+    'OPTIMIZATION_RECOMMENDED',
+    'INVESTIGATION_REQUIRED',
+    'INSUFFICIENT_DATA',
+    'INCONCLUSIVE'
+]);
+
+const RECOMMENDATION_PRIMARY_FINDINGS = new Set([
+    'SYSTEM_OK',
+    'HEATING_CURVE_TOO_HIGH',
+    'HEATING_CURVE_TOO_LOW',
+    'HEATING_CURVE_TOO_STEEP',
+    'HEATING_CURVE_TOO_FLAT',
+    'CURVE_OFFSET_TOO_HIGH',
+    'CURVE_OFFSET_TOO_LOW',
+    'FLOW_TRACKING_PROBLEM',
+    'ROOM_IMBALANCE',
+    'SENSOR_PROBLEM',
+    'ADDITIONAL_HEAT_INFLUENCE',
+    'INSUFFICIENT_DATA',
+    'INCONCLUSIVE'
+]);
+
+const RECOMMENDATION_CHANGE_PARAMETERS = new Set([
+    'heatingCurve',
+    'heatingCurveOffset'
+]);
+
+function recommendationIsObject(value) {
+    return !!value && typeof value === 'object' && !Array.isArray(value);
+}
+
+function recommendationIsFiniteNumber(value) {
+    return typeof value === 'number' && Number.isFinite(value);
+}
+
+function recommendationIsNonEmptyString(value) {
+    return typeof value === 'string' && value.trim().length > 0;
+}
+
+function recommendationAddError(errors, code) {
+    if (!errors.includes(code)) errors.push(code);
+}
+
+function validateRecommendationPayload(payload) {
+    const errors = [];
+
+    if (payload.schema !== RECOMMENDATION_SCHEMA) {
+        recommendationAddError(errors, 'INVALID_SCHEMA');
+    }
+
+    if (payload.schemaVersion !== RECOMMENDATION_SCHEMA_VERSION) {
+        recommendationAddError(errors, 'INVALID_SCHEMA_VERSION');
+    }
+
+    const analysisReference = payload.analysisReference;
+    if (!recommendationIsObject(analysisReference)) {
+        recommendationAddError(errors, 'ANALYSIS_REFERENCE_MISSING');
+    } else {
+        if (!recommendationIsNonEmptyString(analysisReference.analysisGeneratedAt)) {
+            recommendationAddError(errors, 'ANALYSIS_GENERATED_AT_MISSING');
+        } else if (!Number.isFinite(Date.parse(analysisReference.analysisGeneratedAt))) {
+            recommendationAddError(errors, 'ANALYSIS_GENERATED_AT_INVALID');
+        }
+
+        if (analysisReference.analysisSchemaVersion !== RECOMMENDATION_ANALYSIS_SCHEMA_VERSION) {
+            recommendationAddError(errors, 'ANALYSIS_SCHEMA_VERSION_INVALID');
+        }
+
+        if (!recommendationIsNonEmptyString(analysisReference.configurationSignature)) {
+            recommendationAddError(errors, 'CONFIGURATION_SIGNATURE_MISSING');
+        }
+    }
+
+    if (typeof payload.analysisValid !== 'boolean') {
+        recommendationAddError(errors, 'ANALYSIS_VALID_INVALID');
+    }
+
+    if (!recommendationIsFiniteNumber(payload.confidence)) {
+        recommendationAddError(errors, 'CONFIDENCE_INVALID');
+    } else if (payload.confidence < 0 || payload.confidence > 1) {
+        recommendationAddError(errors, 'CONFIDENCE_OUT_OF_RANGE');
+    }
+
+    const assessment = payload.assessment;
+    if (!recommendationIsObject(assessment)) {
+        recommendationAddError(errors, 'ASSESSMENT_MISSING');
+    } else {
+        if (!RECOMMENDATION_OVERALL_STATES.has(assessment.overallState)) {
+            recommendationAddError(errors, 'OVERALL_STATE_INVALID');
+        }
+        if (!RECOMMENDATION_PRIMARY_FINDINGS.has(assessment.primaryFinding)) {
+            recommendationAddError(errors, 'PRIMARY_FINDING_INVALID');
+        }
+    }
+
+    const recommendation = payload.recommendation;
+    if (!recommendationIsObject(recommendation)) {
+        recommendationAddError(errors, 'RECOMMENDATION_MISSING');
+    } else {
+        if (!RECOMMENDATION_ACTIONS.has(recommendation.action)) {
+            recommendationAddError(errors, 'ACTION_INVALID');
+        }
+
+        if (recommendation.action === 'CHANGE_PARAMETER') {
+            if (!RECOMMENDATION_CHANGE_PARAMETERS.has(recommendation.parameter)) {
+                recommendationAddError(errors, 'PARAMETER_INVALID');
+            }
+
+            if (!recommendationIsFiniteNumber(recommendation.currentValue)) {
+                recommendationAddError(errors, 'CURRENT_VALUE_INVALID');
+            }
+            if (!recommendationIsFiniteNumber(recommendation.recommendedValue)) {
+                recommendationAddError(errors, 'RECOMMENDED_VALUE_INVALID');
+            }
+            if (!recommendationIsFiniteNumber(recommendation.change)) {
+                recommendationAddError(errors, 'CHANGE_INVALID');
+            }
+
+            if (
+                recommendationIsFiniteNumber(recommendation.currentValue) &&
+                recommendationIsFiniteNumber(recommendation.recommendedValue) &&
+                recommendationIsFiniteNumber(recommendation.change)
+            ) {
+                const expectedChange =
+                    recommendation.recommendedValue - recommendation.currentValue;
+
+                if (Math.abs(expectedChange - recommendation.change) > 0.000001) {
+                    recommendationAddError(errors, 'CHANGE_INCONSISTENT');
+                }
+
+                if (recommendation.change === 0) {
+                    recommendationAddError(errors, 'CHANGE_ZERO');
+                }
+
+                // Für beide aktuell freigegebenen Parameter gilt pro
+                // Optimierungszyklus maximal ein Schritt bzw. 1 K.
+                if (Math.abs(recommendation.change) > 1) {
+                    recommendationAddError(errors, 'CHANGE_LIMIT_EXCEEDED');
+                }
+            }
+
+            if (
+                recommendationIsFiniteNumber(payload.confidence) &&
+                payload.confidence < RECOMMENDATION_MIN_CHANGE_CONFIDENCE
+            ) {
+                recommendationAddError(errors, 'CONFIDENCE_TOO_LOW_FOR_CHANGE');
+            }
+
+            const observationHours =
+                recommendationIsObject(payload.observation)
+                    ? payload.observation.recommendedObservationHours
+                    : undefined;
+
+            if (!recommendationIsFiniteNumber(observationHours)) {
+                recommendationAddError(errors, 'OBSERVATION_HOURS_INVALID');
+            } else if (observationHours !== RECOMMENDATION_STANDARD_OBSERVATION_HOURS) {
+                recommendationAddError(errors, 'OBSERVATION_HOURS_NOT_STANDARD');
+            }
+        }
+    }
+
+    if (
+        payload.secondaryRecommendation !== null &&
+        payload.secondaryRecommendation !== undefined &&
+        !recommendationIsObject(payload.secondaryRecommendation)
+    ) {
+        recommendationAddError(errors, 'SECONDARY_RECOMMENDATION_INVALID');
+    }
+
+    if (!Array.isArray(payload.reasonCodes)) {
+        recommendationAddError(errors, 'REASON_CODES_INVALID');
+    } else if (payload.reasonCodes.some(code => typeof code !== 'string')) {
+        recommendationAddError(errors, 'REASON_CODE_INVALID');
+    }
+
+    if (typeof payload.explanation !== 'string') {
+        recommendationAddError(errors, 'EXPLANATION_INVALID');
+    }
+
+    if (!recommendationIsObject(payload.observation)) {
+        recommendationAddError(errors, 'OBSERVATION_MISSING');
+    } else if (
+        !recommendationIsFiniteNumber(payload.observation.recommendedObservationHours) ||
+        payload.observation.recommendedObservationHours <= 0
+    ) {
+        recommendationAddError(errors, 'OBSERVATION_HOURS_INVALID');
+    }
+
+    return {
+        valid: errors.length === 0,
+        errors
+    };
+}
+
+function readRecommendationEvidenceState() {
+    const raw = getState(`${ROOT}.Analysis.EvidenceJson`)?.val;
+
+    if (!raw) return null;
+
+    try {
+        const parsed = JSON.parse(String(raw));
+        return recommendationIsObject(parsed) ? parsed : null;
+    } catch (_) {
+        return null;
+    }
+}
+
+function recommendationCurrentParameterValue(parameter) {
+    if (parameter === 'heatingCurve') {
+        const value = getState(`${ROOT}.Configuration.HeatingCurve`)?.val;
+        return recommendationIsFiniteNumber(Number(value))
+            ? Number(value)
+            : null;
+    }
+
+    if (parameter === 'heatingCurveOffset') {
+        const value = getState(`${ROOT}.Configuration.HeatingCurveOffset`)?.val;
+        return recommendationIsFiniteNumber(Number(value))
+            ? Number(value)
+            : null;
+    }
+
+    return null;
+}
+
+function evaluateRecommendationChangeAllowed(
+    payload,
+    validation,
+    context = null
+) {
+    const blockers = [];
+
+    if (!validation?.valid) {
+        recommendationAddError(blockers, 'RECOMMENDATION_INVALID');
+    }
+
+    const recommendation =
+        recommendationIsObject(payload?.recommendation)
+            ? payload.recommendation
+            : {};
+
+    const assessment =
+        recommendationIsObject(payload?.assessment)
+            ? payload.assessment
+            : {};
+
+    if (recommendation.action !== 'CHANGE_PARAMETER') {
+        recommendationAddError(blockers, 'ACTION_NOT_CHANGE_PARAMETER');
+    }
+
+    if (payload?.analysisValid !== true) {
+        recommendationAddError(blockers, 'ANALYSIS_NOT_VALID');
+    }
+
+    const aiReady = context
+        ? context.aiReady === true
+        : getState(`${ROOT}.AI.Ready`)?.val === true;
+
+    if (!aiReady) {
+        recommendationAddError(blockers, 'AI_NOT_READY');
+    }
+
+    const evidence = context
+        ? context.evidence ?? null
+        : readRecommendationEvidenceState();
+
+    if (!evidence) {
+        recommendationAddError(blockers, 'EVIDENCE_UNAVAILABLE');
+    } else {
+        if (evidence.insufficientData === true) {
+            recommendationAddError(blockers, 'INSUFFICIENT_DATA');
+        }
+
+        if (evidence.sensorMismatch?.value === true) {
+            recommendationAddError(blockers, 'SENSOR_MISMATCH');
+        }
+
+        if (evidence.flowTrackingProblem?.value === true) {
+            recommendationAddError(blockers, 'FLOW_TRACKING_PROBLEM');
+        }
+
+        if (evidence.additionalHeatInfluence === true) {
+            recommendationAddError(blockers, 'ADDITIONAL_HEAT_INFLUENCE');
+        }
+
+        // Eine Steilheitskorrektur benötigt Daten aus mindestens zwei
+        // belastbaren Außentemperaturbereichen. Drei oder mehr sind
+        // wünschenswert, zwei sind der definierte Mindestwert.
+        if (
+            recommendation.action === 'CHANGE_PARAMETER' &&
+            recommendation.parameter === 'heatingCurve' &&
+            (
+                assessment.primaryFinding === 'HEATING_CURVE_TOO_STEEP' ||
+                assessment.primaryFinding === 'HEATING_CURVE_TOO_FLAT'
+            )
+        ) {
+            const validBinCount =
+                evidence.outdoorDependentDeviation?.validBinCount;
+
+            if (
+                !recommendationIsFiniteNumber(validBinCount) ||
+                validBinCount < 2
+            ) {
+                recommendationAddError(
+                    blockers,
+                    'INSUFFICIENT_OUTDOOR_BINS_FOR_SLOPE_CHANGE'
+                );
+            }
+        }
+    }
+
+    // Findings, die zunächst Untersuchung statt Parameteränderung verlangen.
+    if (
+        recommendation.action === 'CHANGE_PARAMETER' &&
+        [
+            'FLOW_TRACKING_PROBLEM',
+            'ROOM_IMBALANCE',
+            'SENSOR_PROBLEM',
+            'ADDITIONAL_HEAT_INFLUENCE',
+            'INSUFFICIENT_DATA',
+            'INCONCLUSIVE'
+        ].includes(assessment.primaryFinding)
+    ) {
+        recommendationAddError(blockers, 'FINDING_REQUIRES_INVESTIGATION');
+    }
+
+    const recommendationSignature =
+        payload?.analysisReference?.configurationSignature;
+
+    const currentSignature = context
+        ? context.currentSignature
+        : getState(`${ROOT}.Configuration.ConfigurationSignature`)?.val;
+
+    if (
+        !recommendationIsNonEmptyString(recommendationSignature) ||
+        !recommendationIsNonEmptyString(currentSignature) ||
+        recommendationSignature !== currentSignature
+    ) {
+        recommendationAddError(blockers, 'CONFIGURATION_SIGNATURE_MISMATCH');
+    }
+
+    if (recommendation.action === 'CHANGE_PARAMETER') {
+        const currentParameterValue = context
+            ? context.currentParameterValue
+            : recommendationCurrentParameterValue(recommendation.parameter);
+
+        if (currentParameterValue === null) {
+            recommendationAddError(blockers, 'CURRENT_PARAMETER_UNAVAILABLE');
+        } else if (
+            !recommendationIsFiniteNumber(recommendation.currentValue) ||
+            Math.abs(
+                currentParameterValue - recommendation.currentValue
+            ) > 0.000001
+        ) {
+            recommendationAddError(blockers, 'CURRENT_VALUE_MISMATCH');
+        }
+    }
+
+    return {
+        allowed: blockers.length === 0,
+        blockers
+    };
+}
+
+async function applyRecommendationChangeAllowed(
+    payload,
+    validation,
+    options = {}
+) {
+    const decision =
+        evaluateRecommendationChangeAllowed(payload, validation);
+
+    await setStateAsync(
+        `${ROOT}.AI.Recommendation.ChangeAllowed`,
+        decision.allowed,
+        true
+    );
+
+    // T9.8: Nur eine tatsächlich freigegebene Empfehlung darf als
+    // Kandidat für eine spätere manuelle Änderung vorgemerkt werden.
+    if (decision.allowed) {
+        await capturePendingOptimizationRecord(payload);
+    }
+
+    if (options.logDecision === true) {
+        log(
+            `${LOG_PREFIX} Recommendation-ChangeAllowed: ` +
+            `${decision.allowed ? 'ALLOWED' : 'BLOCKED'} | ` +
+            `Blocker=${decision.blockers.length}` +
+            `${decision.blockers.length > 0 ? ` | ${decision.blockers.join(',')}` : ''}`,
+            decision.allowed ? 'info' : 'info'
+        );
+    }
+
+    return decision;
+}
+
+async function refreshRecommendationChangeAllowed(options = {}) {
+    const raw =
+        getState(`${ROOT}.AI.Recommendation.InputPayload`)?.val;
+
+    const text = String(raw ?? '').trim();
+
+    if (text === '' || text === '{}') {
+        await setStateAsync(
+            `${ROOT}.AI.Recommendation.ChangeAllowed`,
+            false,
+            true
+        );
+        return {
+            allowed: false,
+            blockers: ['NO_RECOMMENDATION']
+        };
+    }
+
+    let payload;
+
+    try {
+        payload = JSON.parse(text);
+    } catch (_) {
+        await setStateAsync(
+            `${ROOT}.AI.Recommendation.ChangeAllowed`,
+            false,
+            true
+        );
+        return {
+            allowed: false,
+            blockers: ['INVALID_JSON']
+        };
+    }
+
+    if (!recommendationIsObject(payload)) {
+        await setStateAsync(
+            `${ROOT}.AI.Recommendation.ChangeAllowed`,
+            false,
+            true
+        );
+        return {
+            allowed: false,
+            blockers: ['PAYLOAD_NOT_OBJECT']
+        };
+    }
+
+    const validation = validateRecommendationPayload(payload);
+
+    return await applyRecommendationChangeAllowed(
+        payload,
+        validation,
+        options
+    );
+}
+
+async function writeRecommendationFields(values) {
+    for (const [relativeId, value] of Object.entries(values)) {
+        await setStateAsync(
+            `${ROOT}.AI.Recommendation.${relativeId}`,
+            value,
+            true
+        );
+    }
+}
+
+async function resetRecommendationParsedFields(
+    validationState,
+    errors = []
+) {
+    await writeRecommendationFields({
+        'Schema': '',
+        'SchemaVersion': '',
+        'AnalysisGeneratedAt': '',
+        'AnalysisSchemaVersion': '',
+        'ConfigurationSignature': '',
+        'AnalysisValid': false,
+        'ConfidencePercent': 0,
+        'OverallState': '',
+        'PrimaryFinding': '',
+        'Action': '',
+        'Parameter': '',
+        'CurrentValue': 0,
+        'RecommendedValue': 0,
+        'Change': 0,
+        'SecondaryRecommendationJson': 'null',
+        'ReasonCodesJson': '[]',
+        'Explanation': '',
+        'ObservationHours': 0,
+        'Valid': false,
+        'ValidationState': validationState,
+        'ValidationErrorsJson': JSON.stringify(errors),
+        'ChangeAllowed': false
+    });
+}
+
+async function parseRecommendationPayload(raw, options = {}) {
+    const receivedAt = isoNow();
+    const text = String(raw ?? '').trim();
+
+    // T9.8 FIX1: Leerer/default Recommendation-Slot ist ein normaler Zustand,
+    // keine fehlerhafte KI-Antwort. Dadurch wird '{}' weder beim Start noch bei
+    // einem bewussten Zurücksetzen als INVALID validiert.
+    if (text === '' || text === '{}') {
+        await resetRecommendationParsedFields(
+            'NOT_VALIDATED',
+            []
+        );
+
+        // Bei einem bewussten Laufzeit-Reset gehört kein alter Empfangszeitpunkt
+        // mehr zur Recommendation. Beim Start wird nur ein ggf. veralteter
+        // Validierungszustand bereinigt.
+        if (options.startup !== true) {
+            await setStateAsync(
+                `${ROOT}.AI.Recommendation.ReceivedAt`,
+                '',
+                true
+            );
+
+            log(
+                `${LOG_PREFIX} Recommendation-Parser: leer | Recommendation zurückgesetzt`,
+                'info'
+            );
+        }
+
+        return {
+            parsed: false,
+            skipped: true,
+            reason: 'EMPTY_INPUT'
+        };
+    }
+
+    await setStateAsync(
+        `${ROOT}.AI.Recommendation.ReceivedAt`,
+        receivedAt,
+        true
+    );
+
+    let payload;
+
+    try {
+        payload = JSON.parse(text);
+    } catch (_) {
+        await resetRecommendationParsedFields(
+            'PARSE_ERROR',
+            ['INVALID_JSON']
+        );
+
+        log(
+            `${LOG_PREFIX} Recommendation-Parser: ungültiges JSON`,
+            'warn'
+        );
+
+        return {
+            parsed: false,
+            skipped: false,
+            reason: 'INVALID_JSON'
+        };
+    }
+
+    if (
+        !payload ||
+        typeof payload !== 'object' ||
+        Array.isArray(payload)
+    ) {
+        await resetRecommendationParsedFields(
+            'PARSE_ERROR',
+            ['PAYLOAD_NOT_OBJECT']
+        );
+
+        log(
+            `${LOG_PREFIX} Recommendation-Parser: JSON-Wurzel ist kein Objekt`,
+            'warn'
+        );
+
+        return {
+            parsed: false,
+            skipped: false,
+            reason: 'PAYLOAD_NOT_OBJECT'
+        };
+    }
+
+    const analysisReference =
+        payload.analysisReference &&
+        typeof payload.analysisReference === 'object' &&
+        !Array.isArray(payload.analysisReference)
+            ? payload.analysisReference
+            : {};
+
+    const assessment =
+        payload.assessment &&
+        typeof payload.assessment === 'object' &&
+        !Array.isArray(payload.assessment)
+            ? payload.assessment
+            : {};
+
+    const recommendation =
+        payload.recommendation &&
+        typeof payload.recommendation === 'object' &&
+        !Array.isArray(payload.recommendation)
+            ? payload.recommendation
+            : {};
+
+    const observation =
+        payload.observation &&
+        typeof payload.observation === 'object' &&
+        !Array.isArray(payload.observation)
+            ? payload.observation
+            : {};
+
+    await writeRecommendationFields({
+        'Schema': recommendationString(payload.schema),
+        'SchemaVersion': recommendationString(payload.schemaVersion),
+        'AnalysisGeneratedAt': recommendationString(
+            analysisReference.analysisGeneratedAt
+        ),
+        'AnalysisSchemaVersion': recommendationString(
+            analysisReference.analysisSchemaVersion
+        ),
+        'ConfigurationSignature': recommendationString(
+            analysisReference.configurationSignature
+        ),
+        'AnalysisValid': recommendationBoolean(payload.analysisValid),
+        'ConfidencePercent': recommendationConfidencePercent(
+            payload.confidence
+        ),
+        'OverallState': recommendationString(assessment.overallState),
+        'PrimaryFinding': recommendationString(assessment.primaryFinding),
+        'Action': recommendationString(recommendation.action),
+        'Parameter': recommendationString(recommendation.parameter),
+        'CurrentValue': recommendationNumber(recommendation.currentValue),
+        'RecommendedValue': recommendationNumber(
+            recommendation.recommendedValue
+        ),
+        'Change': recommendationNumber(recommendation.change),
+        'SecondaryRecommendationJson': recommendationJson(
+            payload.secondaryRecommendation,
+            'null'
+        ),
+        'ReasonCodesJson': recommendationJson(
+            payload.reasonCodes,
+            '[]'
+        ),
+        'Explanation': recommendationString(payload.explanation),
+        'ObservationHours': recommendationNumber(
+            observation.recommendedObservationHours
+        ),
+
+        // T9.6 setzt Valid/ValidationState nach fachlicher Prüfung.
+        // T9.7 entscheidet ausschließlich über ChangeAllowed.
+        'Valid': false,
+        'ValidationState': 'PARSED_NOT_VALIDATED',
+        'ValidationErrorsJson': '[]',
+        'ChangeAllowed': false
+    });
+
+    log(
+        `${LOG_PREFIX} Recommendation-Parser: JSON eingelesen | ` +
+        `Schema=${recommendationString(payload.schema) || '-'} | ` +
+        `Version=${recommendationString(payload.schemaVersion) || '-'} | ` +
+        `Action=${recommendationString(recommendation.action) || '-'}`,
+        'info'
+    );
+
+    const validation = validateRecommendationPayload(payload);
+
+    await writeRecommendationFields({
+        'Valid': validation.valid,
+        'ValidationState': validation.valid ? 'VALID' : 'INVALID',
+        'ValidationErrorsJson': JSON.stringify(validation.errors),
+
+        // Vor der T9.7-Sicherheitsentscheidung immer fail-safe zurücksetzen.
+        'ChangeAllowed': false
+    });
+
+    log(
+        `${LOG_PREFIX} Recommendation-Validator: ` +
+        `${validation.valid ? 'VALID' : 'INVALID'} | ` +
+        `Fehler=${validation.errors.length}` +
+        `${validation.errors.length > 0 ? ` | ${validation.errors.join(',')}` : ''}`,
+        validation.valid ? 'info' : 'warn'
+    );
+
+    const changeDecision =
+        await applyRecommendationChangeAllowed(
+            payload,
+            validation,
+            { logDecision: true }
+        );
+
+    return {
+        parsed: true,
+        skipped: false,
+        reason: null,
+        valid: validation.valid,
+        validationErrors: validation.errors,
+        changeAllowed: changeDecision.allowed,
+        changeBlockers: changeDecision.blockers
+    };
+}
+
+async function parseExistingRecommendationPayload() {
+    const raw =
+        getState(`${ROOT}.AI.Recommendation.InputPayload`)?.val;
+
+    if (raw === null || raw === undefined) return;
+
+    await parseRecommendationPayload(raw, {
+        startup: true
+    });
+}
+
+function installRecommendationParser() {
+    recommendationSubscription = on(
+        {
+            id: `${ROOT}.AI.Recommendation.InputPayload`,
+            change: 'ne'
+        },
+        obj => {
+            parseRecommendationPayload(obj?.state?.val, {
+                startup: false
+            }).catch(err => {
+                recordError(
+                    'RECOMMENDATION_PARSE_FAILED',
+                    err
+                );
+            });
+        }
+    );
+
+    return !!recommendationSubscription;
+}
+
+// ============================================================
 // Beta.1 - Ringbuffer / Persistenz
 // ============================================================
 let sampleBuffer = [];
@@ -1960,6 +3443,36 @@ function buildOutdoorBins(nowTs, signature) {
         const validHeatingHours =
             sampleCount * SAMPLE_INTERVAL_MINUTES / 60;
 
+        // T9.2: Komfortanteile basieren auf allen gültigen
+        // Raumbeobachtungen der gültigen Heizsamples dieses Bins.
+        const roomObservationCount =
+            items.reduce(
+                (sum, sample) =>
+                    sum + (sample.rooms.validCount || 0),
+                0
+            );
+
+        const totalTooCold =
+            items.reduce(
+                (sum, sample) =>
+                    sum + (sample.rooms.tooColdCount || 0),
+                0
+            );
+
+        const totalOK =
+            items.reduce(
+                (sum, sample) =>
+                    sum + (sample.rooms.okCount || 0),
+                0
+            );
+
+        const totalTooWarm =
+            items.reduce(
+                (sum, sample) =>
+                    sum + (sample.rooms.tooWarmCount || 0),
+                0
+            );
+
         result[name] = {
             valid: validHeatingHours >= MIN_BIN_VALID_HOURS,
             sampleCount,
@@ -1984,7 +3497,22 @@ function buildOutdoorBins(nowTs, signature) {
                 average(items.map(s => s.nibe.supplyDeviation)),
 
             averageDegreeMinutes:
-                average(items.map(s => s.nibe.degreeMinutes))
+                average(items.map(s => s.nibe.degreeMinutes)),
+
+            tooColdRatio:
+                roomObservationCount
+                    ? totalTooCold / roomObservationCount * 100
+                    : 0,
+
+            okRatio:
+                roomObservationCount
+                    ? totalOK / roomObservationCount * 100
+                    : 0,
+
+            tooWarmRatio:
+                roomObservationCount
+                    ? totalTooWarm / roomObservationCount * 100
+                    : 0
         };
     }
 
@@ -3076,6 +4604,24 @@ function normalizeOutdoorBinsForPayload(outdoorBins) {
             averageDegreeMinutes:
                 integerOrNull(
                     bin.averageDegreeMinutes
+                ),
+
+            tooColdRatioPercent:
+                roundNumber(
+                    bin.tooColdRatio,
+                    1
+                ),
+
+            okRatioPercent:
+                roundNumber(
+                    bin.okRatio,
+                    1
+                ),
+
+            tooWarmRatioPercent:
+                roundNumber(
+                    bin.tooWarmRatio,
+                    1
                 )
         };
     }
@@ -3128,6 +4674,49 @@ function normalizePersistentRooms(list) {
     }));
 }
 
+function readPreviousOptimizationForPayload() {
+    const raw =
+        getState(
+            `${ROOT}.AI.Optimization.LastRecord`
+        )?.val;
+
+    if (
+        raw === null ||
+        raw === undefined ||
+        raw === '' ||
+        raw === 'null' ||
+        raw === '{}'
+    ) {
+        return null;
+    }
+
+    try {
+        const parsed = JSON.parse(String(raw));
+
+        if (
+            !parsed ||
+            Array.isArray(parsed) ||
+            typeof parsed !== 'object'
+        ) {
+            return null;
+        }
+
+        // T9.3 übernimmt nur Records des bereits festgelegten
+        // OptimizationRecord-Schema. Erzeugung erfolgt in T9.8, Bewertung folgt in T9.9.
+        if (
+            parsed.schema !== 'NPS-AI-OptimizationRecord' ||
+            parsed.schemaVersion !== '1.0'
+        ) {
+            return null;
+        }
+
+        return parsed;
+
+    } catch (_) {
+        return null;
+    }
+}
+
 function buildAiAnalysisPayload({
     timestamp,
     config,
@@ -3144,6 +4733,9 @@ function buildAiAnalysisPayload({
         evidenceResult.evidence;
 
     const payload = {
+        schema:
+            PAYLOAD_SCHEMA,
+
         schemaVersion:
             PAYLOAD_VERSION,
 
@@ -3152,6 +4744,9 @@ function buildAiAnalysisPayload({
 
         generatedAt:
             isoNow(),
+
+        analysisPeriodHours:
+            PRIMARY_ANALYSIS_PERIOD_HOURS,
 
         ready:
             evidence.aiReady === true,
@@ -3182,7 +4777,11 @@ function buildAiAnalysisPayload({
                 integerOrNull(
                     dataQuality
                         .currentConfigurationSampleCount
-                )
+                ),
+
+            plant: {
+                ...PLANT_INFO
+            }
         },
 
         configuration: {
@@ -3716,7 +5315,11 @@ function buildAiAnalysisPayload({
                 ),
 
             warnings: []
-        }
+        },
+
+        // T9.3: letzter gültiger OptimizationRecord; sonst null.
+        previousOptimization:
+            readPreviousOptimizationForPayload()
     };
 
     return payload;
@@ -4074,6 +5677,28 @@ async function performSnapshot({
         });
     }
 
+        // T9.8: Falls seit einer freigegebenen Recommendation eine
+        // manuelle Anlagenänderung erfolgt ist, wird sie jetzt dokumentiert.
+        await finalizePendingOptimizationRecord({
+            timestamp,
+            config,
+            signature
+        });
+
+        // T9.9: Nach Ablauf der Beobachtungsfrist wird der letzte
+        // OptimizationRecord deterministisch Vorher/Nachher bewertet.
+        await evaluateLastOptimizationRecord({
+            timestamp,
+            signature
+        });
+
+        // T9.7: ChangeAllowed hängt von aktuellen Evidence-/Ready-/
+        // Konfigurationswerten ab und wird daher nach jedem Snapshot
+        // erneut fail-safe bewertet, ohne ReceivedAt zu verändern.
+        await refreshRecommendationChangeAllowed({
+            logDecision: false
+        });
+
         return {
             signature,
             nibe,
@@ -4210,6 +5835,193 @@ async function recordError(code, err) {
 }
 
 // ============================================================
+// T9.10 - Interner Startup-Integritätstest
+// ============================================================
+function runT910IsolatedEndToEndSelfTest() {
+    const signature = 'T9.10|curve=6|offset=0';
+    const analysisGeneratedAt = '2026-01-15T08:00:00.000Z';
+    const receivedAt = '2026-01-15T08:05:00.000Z';
+    const appliedAt = '2026-01-15T08:10:00.000Z';
+
+    const inputJson = JSON.stringify({
+        schema: RECOMMENDATION_SCHEMA,
+        schemaVersion: RECOMMENDATION_SCHEMA_VERSION,
+        analysisReference: {
+            analysisGeneratedAt,
+            analysisSchemaVersion: RECOMMENDATION_ANALYSIS_SCHEMA_VERSION,
+            configurationSignature: signature
+        },
+        analysisValid: true,
+        confidence: 0.90,
+        assessment: {
+            overallState: 'OPTIMIZATION_RECOMMENDED',
+            primaryFinding: 'HEATING_CURVE_TOO_HIGH'
+        },
+        recommendation: {
+            action: 'CHANGE_PARAMETER',
+            parameter: 'heatingCurve',
+            currentValue: 6,
+            recommendedValue: 5,
+            change: -1
+        },
+        secondaryRecommendation: null,
+        reasonCodes: ['T9_10_SYNTHETIC_TEST'],
+        explanation: 'Isolierter T9.10-Selbsttest ohne Anlagenzugriff.',
+        observation: {
+            recommendedObservationHours: 72
+        }
+    });
+
+    let payload;
+    try {
+        payload = JSON.parse(inputJson);
+    } catch (_) {
+        return { pass: false, stage: 'PARSER', detail: 'INVALID_JSON' };
+    }
+
+    if (!recommendationIsObject(payload)) {
+        return { pass: false, stage: 'PARSER', detail: 'PAYLOAD_NOT_OBJECT' };
+    }
+
+    const validation = validateRecommendationPayload(payload);
+    if (!validation.valid) {
+        return {
+            pass: false,
+            stage: 'VALIDATOR',
+            detail: validation.errors.join(',')
+        };
+    }
+
+    const evidence = {
+        insufficientData: false,
+        sensorMismatch: { value: false },
+        flowTrackingProblem: { value: false },
+        additionalHeatInfluence: false,
+        outdoorDependentDeviation: { validBinCount: 3 }
+    };
+
+    const decision = evaluateRecommendationChangeAllowed(
+        payload,
+        validation,
+        {
+            aiReady: true,
+            evidence,
+            currentSignature: signature,
+            currentParameterValue: 6
+        }
+    );
+
+    if (!decision.allowed || decision.blockers.length !== 0) {
+        return {
+            pass: false,
+            stage: 'CHANGE_ALLOWED',
+            detail: decision.blockers.join(',')
+        };
+    }
+
+    const beforeSnapshot = {
+        generatedAt: analysisGeneratedAt,
+        ready: true,
+        configurationSignature: signature,
+        analysis72h: {
+            valid: true,
+            rooms: {
+                medianDeviationK: 0.8,
+                okRatioPercent: 55
+            }
+        },
+        evidence,
+        dataQuality: { percent: 90, state: 'GOOD' }
+    };
+
+    const pending = buildPendingOptimizationRecord(
+        payload,
+        {
+            receivedAt,
+            createdAt: receivedAt,
+            beforeSnapshot
+        }
+    );
+
+    if (
+        pending.recordState !== 'PENDING_MANUAL_CHANGE' ||
+        pending.change.beforeValue !== 6 ||
+        pending.change.recommendedValue !== 5 ||
+        pending.before !== beforeSnapshot
+    ) {
+        return { pass: false, stage: 'PENDING_RECORD', detail: 'RECORD_INVALID' };
+    }
+
+    const afterSignature = 'T9.10|curve=5|offset=0';
+    const observing = buildObservingOptimizationRecord(
+        pending,
+        {
+            appliedAt,
+            currentValue: 5,
+            signature: afterSignature
+        }
+    );
+
+    if (
+        observing.recordState !== 'OBSERVING' ||
+        observing.change.afterValue !== 5 ||
+        observing.change.afterConfigurationSignature !== afterSignature ||
+        observing.evaluation.status !== 'NOT_EVALUATED'
+    ) {
+        return { pass: false, stage: 'OBSERVING', detail: 'TRANSITION_INVALID' };
+    }
+
+    const afterSnapshot = {
+        generatedAt: '2026-01-18T08:10:00.000Z',
+        ready: true,
+        configurationSignature: afterSignature,
+        analysis72h: {
+            valid: true,
+            rooms: {
+                medianDeviationK: 0.4,
+                okRatioPercent: 67
+            }
+        },
+        evidence,
+        dataQuality: { percent: 91, state: 'GOOD' }
+    };
+
+    const preconditionErrors = optimizationEvaluationPreconditionErrors(
+        observing,
+        afterSnapshot,
+        afterSignature
+    );
+
+    if (preconditionErrors.length !== 0) {
+        return {
+            pass: false,
+            stage: 'EVALUATION_PRECONDITIONS',
+            detail: preconditionErrors.join(',')
+        };
+    }
+
+    const evaluation = classifyOptimizationEvaluation(
+        observing.before,
+        afterSnapshot
+    );
+
+    if (evaluation.status !== 'IMPROVED') {
+        return {
+            pass: false,
+            stage: 'EVALUATION',
+            detail: evaluation.status
+        };
+    }
+
+    return {
+        pass: true,
+        stage: 'COMPLETE',
+        detail: 'IMPROVED',
+        recordId: pending.recordId
+    };
+}
+
+// ============================================================
 // Initialisierung
 // ============================================================
 async function initialize() {
@@ -4217,6 +6029,23 @@ async function initialize() {
 
     try {
         await ensureDatapoints();
+
+        // T9.5-T9.9 - Recommendation + OptimizationRecord/Evaluation.
+        // Erst Subscription installieren, dann ggf. einen persistierten
+        // manuellen Input vom vorherigen Lauf erneut abbilden.
+        const recommendationParserOk =
+            installRecommendationParser();
+
+        await parseExistingRecommendationPayload();
+
+        const t910SelfTest = runT910IsolatedEndToEndSelfTest();
+        log(
+            `${LOG_PREFIX} T9.10 Startup-Integritätstest: ` +
+            `${t910SelfTest.pass ? 'PASS' : 'FAIL'} | ` +
+            `Stufe=${t910SelfTest.stage} | Ergebnis=${t910SelfTest.detail} | ` +
+            `isoliert=true | Anlagenzugriff=false`,
+            t910SelfTest.pass ? 'info' : 'error'
+        );
 
         await setStateAsync(`${ROOT}.Status.Version`, VERSION, true);
         await setStateAsync(`${ROOT}.Status.Active`, false, true);
@@ -4258,7 +6087,7 @@ async function initialize() {
 
         await setStateAsync(
             `${ROOT}.Status.Valid`,
-            sourceCheck.ok && schedulerOk,
+            sourceCheck.ok && schedulerOk && recommendationParserOk && t910SelfTest.pass,
             true
         );
 
@@ -4349,18 +6178,23 @@ async function initialize() {
         }
 
         log(
+            `${LOG_PREFIX} Recommendation-Parser/Validator/ChangeAllowed/OptimizationRecord/Evaluation/Startup-Integritätstest: ${recommendationParserOk ? 'aktiv' : 'FEHLER'}`,
+            recommendationParserOk ? 'info' : 'error'
+        );
+
+        log(
             `${LOG_PREFIX} Scheduler: 5-Minuten-Raster ${schedulerOk ? 'aktiv' : 'FEHLER'}`,
             schedulerOk ? 'info' : 'error'
         );
 
-        if (sourceCheck.ok && schedulerOk) {
+        if (sourceCheck.ok && schedulerOk && recommendationParserOk && t910SelfTest.pass) {
             log(
-                `${LOG_PREFIX} v0.1.1 Initialisierung erfolgreich`,
+                `${LOG_PREFIX} v${VERSION} Initialisierung erfolgreich`,
                 'info'
             );
         } else {
             log(
-                `${LOG_PREFIX} v0.1.1 Initialisierung unvollständig`,
+                `${LOG_PREFIX} v${VERSION} Initialisierung unvollständig`,
                 'warn'
             );
         }

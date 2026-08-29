@@ -106,8 +106,8 @@
       "file": "scripts/15_NPS_HeatingCurveAnalyzer.js",
       "source_export": "NPS_-_15_NPS_HeatingCurveAnalyzer.json",
       "enabled_in_export": true,
-      "version": "0.1.1",
-      "sha256": "04a45248ff52675962498c3f3d5840fc4a11135d64ea1d2c8defdc2f54fd2486"
+      "version": "0.2.0",
+      "sha256": "48f1fd9876efe75048b647530fe6251d420f05d0f0411c0d974ff2a215c6ce25"
     },
     {
       "file": "scripts/98_NPS_CycleRecorder.js",
