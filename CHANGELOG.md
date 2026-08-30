@@ -6,6 +6,21 @@ The project follows semantic versioning principles for repository releases.
 
 ## [Unreleased]
 
+## [1.1.0-beta.2] - 2026-08-30
+
+### Added
+
+- Added a complete public installation and commissioning guide in `docs/INSTALLATION.md`.
+- Added a current production-script inventory with the validated versions of all 16 active NPS production modules.
+
+### Changed
+
+- Expanded `README.md` with features, supported setup, quick-start guidance and clearer public-beta installation information.
+- Clarified that `15_NPS_HeatingCurveAnalyzer` is optional and requires installation-specific NIBE, heatingcontrol and room configuration.
+- Clarified that the AI-assisted heating optimization workflow is advisory only and does not automatically write NIBE heating parameters.
+- Clarified Jarvis publication status: the repository documents the reference UI but does not include a complete private `jarvis.0` export.
+- Updated repository documentation references from `1.1.0-beta.1` to `1.1.0-beta.2`.
+
 ## [1.1.0-beta.1] - 2026-08-30
 
 ### Added

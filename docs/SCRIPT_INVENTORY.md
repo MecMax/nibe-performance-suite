@@ -6,7 +6,7 @@ The repository itself is the authoritative source for script versions.
 
 Current NPS repository release:
 
-**NPS 1.1.0-beta.1**
+**NPS 1.1.0-beta.2**
 
 ---
 
@@ -108,7 +108,7 @@ These module versions do not have to match the repository release version.
 For example, the repository release:
 
 ```text
-1.1.0-beta.1
+1.1.0-beta.2
 ```
 
 contains production modules with independent versions such as:

@@ -5,7 +5,7 @@ for a new ioBroker installation.
 
 The current public beta is:
 
-**NPS 1.1.0-beta.1**
+**NPS 1.1.0-beta.2**
 
 NPS is currently developed and tested with a NIBE S2125 heat pump and
 VVM S500 indoor module connected to ioBroker through Modbus TCP.
@@ -423,7 +423,7 @@ The AI-assisted workflow is advisory only.
 NPS evaluates and validates recommendations. Any accepted NIBE parameter
 change is performed manually by the user.
 
-NPS 1.1.0-beta.1 does not automatically write heating-curve optimization
+NPS 1.1.0-beta.2 does not automatically write heating-curve optimization
 parameters to the NIBE system.
 
 See:
@@ -495,7 +495,7 @@ Review [`../tools/README.md`](../tools/README.md) before using them.
 
 ## 15. Beta status
 
-NPS 1.1.0-beta.1 extends the frozen NPS 1.0.0 architectural baseline.
+NPS 1.1.0-beta.2 extends the frozen NPS 1.0.0 architectural baseline.
 
 The core monitoring, energy, cycle and visualization functions are
 production-tested on the reference installation.

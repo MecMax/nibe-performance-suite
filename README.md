@@ -91,7 +91,7 @@ and public APIs.
 
 Current repository release:
 
-**NPS 1.1.0-beta.1**
+**NPS 1.1.0-beta.2**
 
 The core monitoring, energy, cycle and visualization functions are
 production-tested.
