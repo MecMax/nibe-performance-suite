@@ -20,15 +20,32 @@ Jarvis
 The former central `00_NPS_Structure` module is no longer part of the V1 architecture.
 Each domain module owns and creates its own public API.
 
-## V1 status
+## Release status
 
-NPS V1 is functionally frozen. Changes after the V1 baseline are classified as:
+NPS 1.0.0 is the frozen architectural baseline.
 
-- **Bugfix V1.x** – corrections to existing behavior
+NPS 1.1 extends this baseline with heating optimization and the
+HeatingCurveAnalyzer while preserving the established V1 architecture
+and public APIs.
+
+Current repository release:
+
+**NPS 1.1.0-beta.1**
+
+The core monitoring, energy, cycle and visualization functions are
+production-tested.
+
+Heating-period-dependent evaluations of the HeatingCurveAnalyzer have
+passed structural, integration and smoke tests. The real seasonal
+before/after optimization cycle remains subject to field validation
+during suitable heating conditions.
+
+Changes are classified as:
+
+- **Bugfix 1.x** – corrections to existing behavior
 - **Configuration change** – thresholds, colors, formatting, etc.
-- **V2 extension** – new modules, analyses, pages or public API structures
-
-See [`docs/V1_BASELINE.md`](docs/V1_BASELINE.md).
+- **Minor release 1.x** – backward-compatible modules or analyses
+- **Major release 2.x** – incompatible architecture or public API changes
 
 ## Repository layout
 
@@ -62,6 +79,7 @@ See [`docs/V1_BASELINE.md`](docs/V1_BASELINE.md).
 12 ElectricalMeters
 13 CycleAnalyzer
 14 PerformanceAnalyzer
+15 HeatingCurveAnalyzer
 98 CycleRecorder
 99 JarvisDeviceImporter
 ```

@@ -6,6 +6,8 @@ The project follows semantic versioning principles for repository releases.
 
 ## [Unreleased]
 
+## [1.1.0-beta.1] - 2026-08-30
+
 ### Added
 
 - Added the standardized AI-assisted heating optimization workflow for `15_NPS_HeatingCurveAnalyzer` v0.2.0: `NPS-AI-AnalysisPayload` v1.1, `NPS-HeatingOptimization-Prompt` v1.0, `NPS-AI-RecommendationPayload` v1.0 and `NPS-AI-OptimizationRecord` v1.0.
